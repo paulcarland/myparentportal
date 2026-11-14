@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Team Treasury</title>
+
+<!-- React + Babel (no build step needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+<!-- Firebase (database + silent anonymous auth) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-auth-compat.js"></script>
+
+<!-- PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #DDE1D6; }
+  body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  @media print { body { background: #fff; } .print\:hidden { display: none !important; } }
+
+  .flex{display:flex} .inline-flex{display:inline-flex} .grid{display:grid} .block{display:block} .inline-block{display:inline-block}
+  .flex-1{flex:1 1 0%} .flex-col{flex-direction:column} .flex-wrap{flex-wrap:wrap}
+  .items-center{align-items:center} .items-start{align-items:flex-start}
+  .justify-between{justify-content:space-between} .justify-center{justify-content:center} .justify-end{justify-content:flex-end}
+  .gap-1{gap:.25rem} .gap-1\.5{gap:.375rem} .gap-2{gap:.5rem} .gap-2\.5{gap:.625rem} .gap-3{gap:.75rem} .gap-5{gap:1.25rem}
+  .grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .font-black{font-weight:900} .font-bold{font-weight:700} .font-semibold{font-weight:600}
+  .mb-1{margin-bottom:.25rem} .mb-2{margin-bottom:.5rem} .mb-3{margin-bottom:.75rem} .mb-4{margin-bottom:1rem} .mb-5{margin-bottom:1.25rem} .mb-6{margin-bottom:1.5rem}
+  .mt-1{margin-top:.25rem} .mt-4{margin-top:1rem} .mt-8{margin-top:2rem}
+  .pb-2{padding-bottom:.5rem} .pb-4{padding-bottom:1rem} .pt-4{padding-top:1rem}
+  .p-3{padding:.75rem} .p-4{padding:1rem} .p-5{padding:1.25rem} .p-6{padding:1.5rem}
+  .px-2{padding-left:.5rem;padding-right:.5rem} .px-3{padding-left:.75rem;padding-right:.75rem} .px-3\.5{padding-left:.875rem;padding-right:.875rem}
+  .px-4{padding-left:1rem;padding-right:1rem} .px-5{padding-left:1.25rem;padding-right:1.25rem} .px-6{padding-left:1.5rem;padding-right:1.5rem}
+  .py-1{padding-top:.25rem;padding-bottom:.25rem} .py-2{padding-top:.5rem;padding-bottom:.5rem} .py-3{padding-top:.75rem;padding-bottom:.75rem}
+  .py-4{padding-top:1rem;padding-bottom:1rem} .py-6{padding-top:1.5rem;padding-bottom:1.5rem} .py-14{padding-top:3.5rem;padding-bottom:3.5rem} .py-16{padding-top:4rem;padding-bottom:4rem}
+  .rounded-full{border-radius:9999px} .rounded-md{border-radius:.375rem} .rounded-lg{border-radius:.5rem} .rounded-xl{border-radius:.75rem} .rounded-2xl{border-radius:1rem}
+  .rounded-t-lg{border-top-left-radius:.5rem;border-top-right-radius:.5rem}
+  .shrink-0{flex-shrink:0}
+  .text-2xl{font-size:1.5rem;line-height:2rem} .text-lg{font-size:1.125rem;line-height:1.75rem} .text-base{font-size:1rem;line-height:1.5rem}
+  .text-sm{font-size:.875rem;line-height:1.25rem} .text-xs{font-size:.75rem;line-height:1rem}
+  .text-center{text-align:center} .text-left{text-align:left} .text-right{text-align:right}
+  .text-white{color:#fff}
+  .tracking-tight{letter-spacing:-.025em} .tracking-wide{letter-spacing:.025em}
+  .uppercase{text-transform:uppercase}
+  .transition-transform{transition:transform .15s ease} .transition-opacity{transition:opacity .15s ease}
+  .w-56{width:14rem} .w-auto{width:auto} .w-full{width:100%}
+  .hidden{display:none} .cursor-pointer{cursor:pointer}
+  .font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .min-w-0{min-width:0}
+  .max-w-sm{max-width:24rem} .max-w-md{max-width:28rem} .max-w-lg{max-width:32rem} .max-w-2xl{max-width:42rem}
+  .min-h-screen{min-height:100vh}
+  .ml-auto{margin-left:auto} .mx-auto{margin-left:auto;margin-right:auto}
+  .opacity-80{opacity:.8}
+  .outline-none{outline:none}
+  .overflow-hidden{overflow:hidden}
+  .border-2{border-width:2px} .border-b{border-bottom-width:1px} .border-t{border-top-width:1px} .border-t-2{border-top-width:2px}
+  .hover\:underline:hover{text-decoration:underline}
+  .hover\:scale-\[1\.01\]:hover{transform:scale(1.01)}
+  .hover\:opacity-90:hover{opacity:.9}
+  .active\:opacity-80:active{opacity:.8}
+  .disabled\:opacity-50:disabled{opacity:.5}
+  .focus\:ring-2:focus{box-shadow:0 0 0 2px rgba(30,107,69,.35)}
+  .animate-spin{animation:tt-spin 1s linear infinite}
+  @keyframes tt-spin{to{transform:rotate(360deg)}}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll > table{min-width:640px}
+  .scroll-hint{display:flex}
+  @media (min-width:640px){ .scroll-hint{display:none} }
+  .tab-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tab-scroll::-webkit-scrollbar{display:none}
+  .tab-scroll > button{flex-shrink:0}
+  @media (min-width:640px){
+    .sm\:col-span-2{grid-column:span 2 / span 2}
+    .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+  @media (min-width:1024px){
+    .lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  /* iPhones zoom the whole page in when you tap a field whose text is smaller than 16px, and stay zoomed afterwards.
+     On phone-sized screens, make every field's text 16px so that never happens. */
+  html { -webkit-text-size-adjust: 100%; }
+  @media (max-width:640px){
+    input, select, textarea { font-size: 16px !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- =====================================================================
+     STEP 1 OF SETUP: paste your Firebase config below.
+     Firebase console → Project settings → General → "Your apps" → SDK setup
+     ===================================================================== -->
+<script>
+  // Paste the config for the NEW Firebase project here (see README → Setup).
+  // These values are not secrets; the security rules are what protect the data.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuCAwKWJYjo9jAgdseDDj7j-NZ02378HM",
+  authDomain: "my-parent-portal.firebaseapp.com",
+  projectId: "my-parent-portal",
+  storageBucket: "my-parent-portal.firebasestorage.app",
+  messagingSenderId: "880693217551",
+  appId: "1:880693217551:web:fa69446eeaff995ae9167a",
+  measurementId: "G-8NLTZXRSB4"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.db = firebase.firestore();
+  window.auth = firebase.auth();
+  // Local testing only: when run from localhost, use the Firebase emulators.
+  if (location.hostname === "localhost") {
+    window.db.useEmulator("127.0.0.1", 8080);
+    window.auth.useEmulator("http://127.0.0.1:9099", { disableWarnings: true });
+  }
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback, useContext } = React;
+
+/* ---------------------------------------------------------------
+   Tokens
+---------------------------------------------------------------- */
+const C = {
+  bg: "#F4F5F0", surface: "#FFFFFF", ink: "#122016", inkSoft: "#4B5B50",
+  pitch: "#1E6B45", pitchDark: "#123D28", pitchTint: "#E7F1EA",
+  navy: "#16324F", navyTint: "#E9EEF3",
+  debit: "#B3441E", debitTint: "#F7E9E1",
+  credit: "#1E6B45", creditTint: "#E7F1EA",
+  line: "#DDE1D6", lineSoft: "#EBEDE6", amber: "#B98A1E",
+};
+
+
+const DEBIT_CATEGORIES = ["Tournament Fee", "League Fee", "Coach Fee", "Adjustment", "Other"];
+const CREDIT_CATEGORIES = ["Player Account Payment", "Adjustment", "Refund", "Other"];
+
+const fmtMoney = (n) => (Number(n) || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const thisMonthStr = () => new Date().toISOString().slice(0, 7);
+const monthLabel = (m) => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }); };
+const slug = (s) => (s || "team").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+const hexToRgb = (hex) => { const n = parseInt(hex.replace("#", ""), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+
+/* ---------------------------------------------------------------
+   CSV / pasted-spreadsheet parsing for player import
+---------------------------------------------------------------- */
+function splitDelimited(line, delim) {
+  const out = []; let cur = ""; let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; } }
+      else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === delim) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+function parseDelimitedText(text) {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return { headers: [], rows: [] };
+  const commaCount = (lines[0].match(/,/g) || []).length;
+  const tabCount = (lines[0].match(/\t/g) || []).length;
+  const delim = tabCount > commaCount ? "\t" : ",";
+  return { headers: splitDelimited(lines[0], delim), rows: lines.slice(1).map((l) => splitDelimited(l, delim)) };
+}
+const normalizeHeader = (h) => (h || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const HEADER_ALIASES = {
+  name: ["name", "playername", "player", "fullname"],
+  parentName: ["parentname", "parent", "guardian", "parentguardian", "guardianname", "parent1", "parent1name", "guardian1", "guardian1name"],
+  parentEmail: ["email", "parentemail", "guardianemail", "parent1email", "guardian1email"],
+  parentName2: ["parentname2", "parent2", "guardian2", "secondparent", "parent2name", "guardian2name"],
+  parentEmail2: ["email2", "parentemail2", "guardianemail2", "secondparentemail", "parent2email"],
+  openingBalance: ["balance", "openingbalance", "opening", "startingbalance"],
+  notes: ["notes", "note", "comments", "comment"],
+};
+function mapHeaders(headers) {
+  const norm = headers.map(normalizeHeader);
+  const map = {};
+  for (const field in HEADER_ALIASES) {
+    const idx = norm.findIndex((h) => HEADER_ALIASES[field].includes(h));
+    if (idx !== -1) map[field] = idx;
+  }
+  return map;
+}
+function buildImportPreview(text, existingNames) {
+  const { headers, rows } = parseDelimitedText(text);
+  if (headers.length === 0) return { error: null, items: [] };
+  const map = mapHeaders(headers);
+  if (map.name === undefined) return { error: 'Couldn\u2019t find a "Name" column. Make sure the first row has headers like Name, Parent Name, Parent Email, Opening Balance.', items: [] };
+  const items = rows.map((r) => {
+    const name = (r[map.name] || "").trim();
+    const parentName = map.parentName !== undefined ? (r[map.parentName] || "").trim() : "";
+    const parentEmail = map.parentEmail !== undefined ? (r[map.parentEmail] || "").trim() : "";
+    const parentName2 = map.parentName2 !== undefined ? (r[map.parentName2] || "").trim() : "";
+    const parentEmail2 = map.parentEmail2 !== undefined ? (r[map.parentEmail2] || "").trim() : "";
+    const balRaw = map.openingBalance !== undefined ? (r[map.openingBalance] || "").trim() : "";
+    const openingBalance = balRaw ? (parseFloat(balRaw.replace(/[^0-9.-]/g, "")) || 0) : 0;
+    const notes = map.notes !== undefined ? (r[map.notes] || "").trim() : "";
+    return { name, parentName, parentEmail, parentName2, parentEmail2, openingBalance, notes, valid: !!name, duplicate: !!name && existingNames.has(name.toLowerCase()) };
+  });
+  return { error: null, items };
+}
+function downloadImportTemplate() {
+  const csv = "Name,Parent Name,Parent Email,Parent Name 2,Parent Email 2,Opening Balance,Notes\nJordan Smith,Alex Smith,alex@example.com,Jamie Smith,jamie@example.com,0,\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "player-import-template.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadBackupJSON(teamName, players, transactions) {
+  const backup = { format: "team-treasury-backup", version: 1, exportedAt: new Date().toISOString(), teamName, players, transactions };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${slug(teamName)}-backup-${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildAccessCodeMailto(teamName, player) {
+  const siteUrl = window.location.origin + window.location.pathname;
+  const greetingName = player.parentName ? player.parentName.split(" ")[0] : "there";
+  const subject = `${teamName} — Parent portal access for ${player.name}`;
+  const emails = [player.parentEmail, player.parentEmail2].filter(Boolean).join(" or ");
+  const link = siteUrl + (window.currentTeamId ? "?team=" + window.currentTeamId : "");
+  const body = `Hi ${greetingName},\n\nYou can view ${player.name}'s team account balance and statements anytime at:\n\n${link}\n\nChoose "Parent portal" and enter your email address (${emails}). We'll email you a one-tap sign-in link. No password or code needed.\n\nThanks!`;
+  let url = `mailto:${player.parentEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (player.parentEmail2) url += `&cc=${encodeURIComponent(player.parentEmail2)}`;
+  return url;
+}
+
+/* ---------------------------------------------------------------
+   Itemized charges: split a shared cost equally and explain the math
+---------------------------------------------------------------- */
+const defaultCoachLines = () => [{ label: "Hotel", amount: "", note: "" }, { label: "Mileage", amount: "", note: "" }, { label: "Food", amount: "", note: "" }];
+// lines: [{label, amount, note}] (amount may be a string from an input); playerCount: how many players share the total.
+// Works in whole cents so nothing drifts; each share is rounded to the nearest cent.
+function computeSplit(lines, playerCount) {
+  const clean = (lines || [])
+    .map((l) => ({ label: String(l.label || "").trim(), cents: Math.round((parseFloat(l.amount) || 0) * 100), note: String(l.note || "").trim() }))
+    .filter((l) => l.cents > 0);
+  const totalCents = clean.reduce((sum, l) => sum + l.cents, 0);
+  const n = Math.max(0, Math.floor(Number(playerCount) || 0));
+  const shareCents = n > 0 ? Math.round(totalCents / n) : 0;
+  return {
+    lines: clean.map((l) => ({ label: l.label || "Item", amount: l.cents / 100, note: l.note })),
+    total: totalCents / 100, players: n, share: shareCents / 100, exact: n > 0 && shareCents * n === totalCents,
+  };
+}
+function breakdownParts(b) {
+  const itemsText = b.lines.map((l) => `${l.label} ${fmtMoney(l.amount)}${l.note ? " (" + l.note + ")" : ""}`).join(" + ");
+  const summaryText = `${fmtMoney(b.total)} total ÷ ${b.players} ${b.players === 1 ? "player" : "players"} = ${fmtMoney(b.share)} each${b.exact ? "" : " (rounded to the nearest cent)"}`;
+  return { itemsText, summaryText };
+}
+const hasBreakdown = (t) => !!(t && t.breakdown && t.breakdown.lines && t.breakdown.lines.length);
+const breakdownText = (b) => { const p = breakdownParts(b); return `${p.itemsText} = ${p.summaryText}`; };
+// Description text for PDFs: the note you typed, plus the calculation underneath when the charge is itemized.
+const pdfDescription = (t) => { const d = t.description || ""; const b = hasBreakdown(t) ? breakdownText(t.breakdown) : ""; return d && b ? d + "\n" + b : (d || b || "—"); };
+
+function buildStatementMailto(teamName, player, month, stats) {
+  const greetingName = player.parentName ? player.parentName.split(" ")[0] : "there";
+  const lines = stats.rows.length
+    ? stats.rows.map((t) => `  ${t.date} — ${t.category}${t.description ? " (" + t.description + ")" : ""}: ${t.direction === "debit" ? "+" : "-"}${fmtMoney(t.amount)}${hasBreakdown(t) ? "\n      " + breakdownText(t.breakdown) : ""}`).join("\n")
+    : "  No activity this month.";
+  const subject = `${teamName} — ${player.name}'s Statement — ${monthLabel(month)}`;
+  const body = `Hi ${greetingName},\n\nHere is ${player.name}'s account statement for ${monthLabel(month)} from ${teamName}.\n\nBeginning balance: ${fmtMoney(stats.beginning)}\nDebits (charges): ${fmtMoney(stats.debits)}\nCredits (paid): ${fmtMoney(stats.credits)}\nEnding balance: ${fmtMoney(Math.abs(stats.ending))}${stats.ending > 0.004 ? " CR" : ""}\n\nTransactions this month:\n${lines}\n\nIf you have any questions, please don't hesitate to reach out.\n\nThanks,\n${teamName}`;
+  let url = `mailto:${player.parentEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (player.parentEmail2) url += `&cc=${encodeURIComponent(player.parentEmail2)}`;
+  return url;
+}
+
+async function commitInChunks(snapshot) {
+  const docs = snapshot.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = window.db.batch();
+    docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+/* ---------------------------------------------------------------
+   Small building blocks
+---------------------------------------------------------------- */
+function Spinner({ size = 15, color }) {
+  return <span className="inline-block animate-spin rounded-full border-2" style={{ width: size, height: size, borderColor: color || C.pitch, borderTopColor: "transparent" }} />;
+}
+function Monogram({ letter, bg }) {
+  return <span className="inline-flex items-center justify-center rounded-xl font-black text-white" style={{ width: 40, height: 40, background: bg || C.pitch }}>{letter}</span>;
+}
+function JerseyBadge({ n }) {
+  return <span className="inline-flex items-center justify-center rounded-full text-xs font-black shrink-0" style={{ width: 28, height: 28, background: C.pitchTint, color: C.pitchDark, fontVariantNumeric: "tabular-nums" }}>{n}</span>;
+}
+function MoneyText({ value, className = "", size = "base" }) {
+  const owed = value < -0.004, hasCredit = value > 0.004;
+  const color = owed ? C.debit : hasCredit ? C.credit : C.inkSoft;
+  const sizeClass = size === "lg" ? "text-2xl" : size === "sm" ? "text-sm" : "text-base";
+  return <span className={`${sizeClass} font-bold ${className}`} style={{ color, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(Math.abs(value))}{hasCredit ? " CR" : ""}</span>;
+}
+function Field({ label, children, hint }) {
+  return <label className="block"><span className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: C.inkSoft }}>{label}</span>{children}{hint && <span className="block text-xs mt-1" style={{ color: C.inkSoft }}>{hint}</span>}</label>;
+}
+const inputStyle = { border: `1px solid ${C.line}`, background: C.surface, color: C.ink };
+const inputClass = "w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2";
+function TextInput(props) { return <input {...props} style={{ ...inputStyle, ...props.style }} className={`${inputClass} ${props.className || ""}`} />; }
+function TextArea(props) { return <textarea {...props} style={{ ...inputStyle, ...props.style }} className={`${inputClass} ${props.className || ""}`} />; }
+function Select(props) { return <select {...props} style={inputStyle} className={`${inputClass} ${props.className || ""}`} />; }
+function Button({ children, variant = "primary", className = "", ...rest }) {
+  const styles = {
+    primary: { background: C.pitch, color: "#fff" }, dark: { background: C.pitchDark, color: "#fff" },
+    ghost: { background: "transparent", color: C.ink, border: `1px solid ${C.line}` }, danger: { background: C.debitTint, color: C.debit },
+  };
+  return <button {...rest} style={styles[variant]} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-50 ${className}`}>{children}</button>;
+}
+function EmptyState({ title, body }) {
+  return <div className="flex flex-col items-center justify-center text-center py-14 px-6 rounded-xl" style={{ background: C.lineSoft }}><p className="font-bold" style={{ color: C.ink }}>{title}</p><p className="text-sm mt-1 max-w-sm" style={{ color: C.inkSoft }}>{body}</p></div>;
+}
+function ExportButton({ onExport, label = "Export PDF", className = "" }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button variant="ghost" disabled={busy} className={className} onClick={async () => {
+      setBusy(true);
+      try { await onExport(); } catch (e) { alert("Couldn't generate the PDF. " + (e && e.message ? e.message : "")); }
+      setBusy(false);
+    }}>
+      {busy ? <Spinner size={14} /> : "⬇"} {label}
+    </Button>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Balance math
+---------------------------------------------------------------- */
+function buildLedger(players, transactions) {
+  const byPlayer = {};
+  for (const p of players) byPlayer[p.id] = [];
+  for (const t of transactions) if (byPlayer[t.playerId]) byPlayer[t.playerId].push(t);
+  for (const id in byPlayer) byPlayer[id].sort((a, b) => a.date.localeCompare(b.date));
+
+  const currentBalance = (playerId) => {
+    const p = players.find((pl) => pl.id === playerId);
+    if (!p) return 0;
+    let bal = Number(p.openingBalance) || 0;
+    for (const t of byPlayer[playerId] || []) bal += t.direction === "credit" ? t.amount : -t.amount;
+    return bal;
+  };
+
+  const monthStats = (playerId, monthStr) => {
+    const p = players.find((pl) => pl.id === playerId);
+    let beginning = Number(p?.openingBalance) || 0;
+    const inMonth = [];
+    for (const t of byPlayer[playerId] || []) {
+      const tMonth = t.date.slice(0, 7);
+      if (tMonth < monthStr) beginning += t.direction === "credit" ? t.amount : -t.amount;
+      else if (tMonth === monthStr) inMonth.push(t);
+    }
+    let debits = 0, credits = 0, running = beginning;
+    const rows = inMonth.map((t) => {
+      running += t.direction === "credit" ? t.amount : -t.amount;
+      if (t.direction === "debit") debits += t.amount; else credits += t.amount;
+      return { ...t, running };
+    });
+    return { beginning, debits, credits, ending: beginning + credits - debits, rows };
+  };
+  const seasonStats = (playerId) => {
+    const p = players.find((pl) => pl.id === playerId);
+    const beginning = Number(p?.openingBalance) || 0;
+    let debits = 0, credits = 0, running = beginning;
+    const rows = (byPlayer[playerId] || []).map((t) => {
+      running += t.direction === "credit" ? t.amount : -t.amount;
+      if (t.direction === "debit") debits += t.amount; else credits += t.amount;
+      return { ...t, running };
+    });
+    return { beginning, debits, credits, ending: beginning + credits - debits, rows };
+  };
+  return { currentBalance, monthStats, seasonStats };
+}
+function useLedger(players, transactions) {
+  return useMemo(() => buildLedger(players, transactions), [players, transactions]);
+}
+
+/* ---------------------------------------------------------------
+   PDF exports
+---------------------------------------------------------------- */
+async function exportRosterPDF(teamName, players, ledger) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
+  doc.setFontSize(10); doc.setTextColor(110, 110, 110); doc.text(`Roster — ${players.length} players — generated ${todayStr()}`, 14, 24);
+  const body = players.map((p, i) => [i + 1, p.name, [p.parentName, p.parentName2].filter(Boolean).join(", ") || "—", [p.parentEmail, p.parentEmail2].filter(Boolean).join(", ") || "—", p.active ? "Active" : "Inactive", fmtMoney(ledger.currentBalance(p.id))]);
+  doc.autoTable({ startY: 30, head: [["#", "Player", "Parent/Guardian", "Parent Email", "Status", "Balance"]], body, styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, columnStyles: { 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
+  doc.save(`${slug(teamName)}-roster.pdf`);
+}
+async function exportTransactionsPDF(teamName, rows, playerName, monthTag) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
+  doc.setFontSize(10); doc.setTextColor(110, 110, 110); doc.text(`Transactions${monthTag ? " — " + monthLabel(monthTag) : ""} — generated ${todayStr()}`, 14, 24);
+  const body = rows.length ? rows.map((t) => [t.date, playerName(t.playerId), t.direction === "debit" ? "Charge" : "Payment", t.category, pdfDescription(t), t.direction === "debit" ? fmtMoney(t.amount) : "", t.direction === "credit" ? fmtMoney(t.amount) : ""]) : [["—", "—", "—", "No transactions match this filter", "", "", ""]];
+  doc.autoTable({ startY: 30, head: [["Date", "Player", "Type", "Category", "Description", "Debit", "Credit"]], body, styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, columnStyles: { 5: { halign: "right" }, 6: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
+  doc.save(`${slug(teamName)}-transactions${monthTag ? "-" + monthTag : ""}.pdf`);
+}
+async function exportSummaryPDF(teamName, summary, totals, month) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
+  doc.setFontSize(12); doc.setTextColor(...hexToRgb(C.ink)); doc.text(`Monthly Statement — ${monthLabel(month)}`, 14, 26);
+  const body = summary.map((r, i) => [i + 1, r.player.name, fmtMoney(r.beginning), r.debits ? fmtMoney(r.debits) : "—", r.credits ? fmtMoney(r.credits) : "—", fmtMoney(r.ending)]);
+  doc.autoTable({ startY: 32, head: [["#", "Player", "Beginning", "Debits", "Credits", "Ending"]], body, foot: [["", "Team total", fmtMoney(totals.beginning), fmtMoney(totals.debits), fmtMoney(totals.credits), fmtMoney(totals.ending)]], styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, footStyles: { fillColor: hexToRgb(C.lineSoft), textColor: hexToRgb(C.ink), fontStyle: "bold" }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
+  doc.save(`${slug(teamName)}-statement-${month}.pdf`);
+}
+async function exportPlayerStatementPDF(teamName, player, month, stats, periodLabel, filterInfo) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const titleLabel = (periodLabel || monthLabel(month)) + (filterInfo ? " — " + filterInfo.label : "");
+  doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
+  doc.setFontSize(10); doc.setTextColor(110, 110, 110); doc.text(`Account Statement — ${titleLabel}`, 14, 24);
+  doc.setFontSize(13); doc.setTextColor(...hexToRgb(C.ink)); doc.text(player.name, 14, 36);
+  doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
+  if (filterInfo) {
+    doc.text("ENTRIES", 14, 46); doc.text("TOTAL", 84, 46);
+    doc.setFontSize(12); doc.setTextColor(...hexToRgb(C.ink)); doc.text(String(filterInfo.rows.length), 14, 53);
+    doc.setTextColor(...hexToRgb(filterInfo.direction === "debit" ? C.debit : C.credit)); doc.text(fmtMoney(filterInfo.total), 84, 53);
+  } else {
+    doc.text("BEGINNING BALANCE", 14, 46); doc.text("DEBITS", 84, 46); doc.text("CREDITS", 124, 46); doc.text("ENDING BALANCE", 164, 46);
+    doc.setFontSize(12); doc.setTextColor(...hexToRgb(C.ink)); doc.text(fmtMoney(stats.beginning), 14, 53);
+    doc.setTextColor(...hexToRgb(C.debit)); doc.text(stats.debits ? fmtMoney(stats.debits) : "—", 84, 53);
+    doc.setTextColor(...hexToRgb(C.credit)); doc.text(stats.credits ? fmtMoney(stats.credits) : "—", 124, 53);
+    const endColor = stats.ending < -0.004 ? C.debit : stats.ending > 0.004 ? C.credit : C.ink;
+    doc.setTextColor(...hexToRgb(endColor)); doc.text(fmtMoney(Math.abs(stats.ending)) + (stats.ending > 0.004 ? " CR" : ""), 164, 53);
+  }
+  const tableRows = filterInfo ? filterInfo.rows : stats.rows;
+  const withBalance = !filterInfo;
+  const head = [["Date", "Category", "Description", "Debit", "Credit"].concat(withBalance ? ["Balance"] : [])];
+  const emptyText = filterInfo ? "No matching transactions" : (periodLabel ? "No activity yet this season" : "No activity this month");
+  const body = tableRows.length
+    ? tableRows.map((t) => { const r = [t.date, t.category, pdfDescription(t), t.direction === "debit" ? fmtMoney(t.amount) : "", t.direction === "credit" ? fmtMoney(t.amount) : ""]; if (withBalance) r.push(fmtMoney(t.running)); return r; })
+    : [["—", "—", emptyText, "", ""].concat(withBalance ? [""] : [])];
+  const columnStyles = { 3: { halign: "right" }, 4: { halign: "right" } };
+  if (withBalance) columnStyles[5] = { halign: "right", fontStyle: "bold" };
+  doc.autoTable({ startY: 62, head, body, styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, columnStyles, alternateRowStyles: { fillColor: [244, 245, 240] } });
+  doc.save(`${slug(player.name)}-statement-${periodLabel ? "season" : month}${filterInfo ? "-" + slug(filterInfo.label) : ""}.pdf`);
+}
+
+// Works out which transactions a "Show" filter selects, plus the total, for the full-season statement.
+// A filter value is "all", "debit|*" (all charges), "credit|*" (all payments), or "debit|<category>" / "credit|<category>".
+function deriveStatementFilter(rows, filter) {
+  const cats = (dir) => [...new Set(rows.filter((t) => t.direction === dir).map((t) => t.category))].sort();
+  const debitCats = cats("debit"), creditCats = cats("credit");
+  const known = filter === "all" || filter === "debit|*" || filter === "credit|*" ||
+    (filter.indexOf("debit|") === 0 && debitCats.includes(filter.slice(6))) ||
+    (filter.indexOf("credit|") === 0 && creditCats.includes(filter.slice(7)));
+  const active = known ? filter : "all";
+  if (active === "all") return { active, debitCats, creditCats, rows, info: null };
+  const sep = active.indexOf("|");
+  const dir = active.slice(0, sep), cat = active.slice(sep + 1);
+  const visible = rows.filter((t) => t.direction === dir && (cat === "*" || t.category === cat));
+  const label = cat === "*" ? (dir === "debit" ? "All charges" : "All payments") : `${cat} (${dir === "debit" ? "charge" : "payment"})`;
+  return { active, debitCats, creditCats, rows: visible, info: { label, direction: dir, rows: visible, total: visible.reduce((sum, t) => sum + t.amount, 0) } };
+}
+
+/* ---------------------------------------------------------------
+   Breakdown display + editor
+---------------------------------------------------------------- */
+function BreakdownNote({ b }) {
+  if (!b || !b.lines || !b.lines.length) return null;
+  const parts = breakdownParts(b);
+  return <div className="text-xs mt-1" style={{ color: C.inkSoft }}><div>{parts.itemsText}</div><div>= {parts.summaryText}</div></div>;
+}
+
+function BreakdownEditor({ lines, setLines, playerCount, setPlayerCount }) {
+  const split = computeSplit(lines, playerCount);
+  const setLine = (i, patch) => setLines(lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const smallInput = { ...inputStyle };
+  return (
+    <div className="rounded-xl p-4" style={{ background: C.lineSoft }}>
+      <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Cost lines (the total is split equally)</p>
+      <div className="grid gap-2">
+        {lines.map((l, i) => (
+          <div key={i} className="flex items-center gap-2 flex-wrap">
+            <input value={l.label} onChange={(e) => setLine(i, { label: e.target.value })} placeholder="Item" style={{ ...smallInput, width: 130 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
+            <input type="number" step="0.01" min="0" value={l.amount} onChange={(e) => setLine(i, { amount: e.target.value })} placeholder="0.00" style={{ ...smallInput, width: 110 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
+            <input value={l.note} onChange={(e) => setLine(i, { note: e.target.value })} placeholder="Note (optional), e.g. 420 mi × $0.70" style={{ ...smallInput, flex: 1, minWidth: 170 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
+            <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))} title="Remove line" className="text-sm font-semibold" style={{ color: C.debit }}>✕</button>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => setLines([...lines, { label: "", amount: "", note: "" }])} className="text-xs font-semibold mt-3" style={{ color: C.pitchDark }}>+ Add line</button>
+      {setPlayerCount && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Players sharing this cost</span>
+          <input type="number" min="1" step="1" value={playerCount} onChange={(e) => setPlayerCount(e.target.value)} style={{ ...smallInput, width: 90 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
+        </div>
+      )}
+      <p className="text-sm font-semibold mt-3" style={{ color: C.ink }}>
+        {split.total > 0 && split.players > 0 ? (
+          <>Total {fmtMoney(split.total)} ÷ {split.players} {split.players === 1 ? "player" : "players"} = <span style={{ color: C.debit }}>{fmtMoney(split.share)} each</span>{!split.exact && <span className="text-xs font-normal" style={{ color: C.inkSoft }}> (rounded to the nearest cent)</span>}</>
+        ) : split.total > 0 ? "Tick the players below to see each share." : "Enter at least one cost line."}
+      </p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Statement detail (shared by admin drill-down + parent view)
+---------------------------------------------------------------- */
+function StatementDetail({ teamName, player, jerseyNo, month, setMonth, stats, onBack, allowEmail, monthHint, period }) {
+  const isSeason = period === "season";
+  const [filter, setFilter] = useState("all");
+  const sf = deriveStatementFilter(stats.rows, isSeason ? filter : "all");
+  const { debitCats, creditCats } = sf;
+  const activeFilter = sf.active, filterInfo = sf.info, visibleRows = sf.rows;
+  const [emailHint, setEmailHint] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const emailWithPdf = async () => {
+    setEmailBusy(true);
+    try {
+      await exportPlayerStatementPDF(teamName, player, month, stats);
+      window.location.href = buildStatementMailto(teamName, player, month, stats);
+      setEmailHint(true);
+      setTimeout(() => setEmailHint(false), 8000);
+    } catch (e) { alert("Couldn't generate the PDF — check your connection and try again."); }
+    setEmailBusy(false);
+  };
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 print:hidden flex-wrap gap-2">
+        {onBack ? <button onClick={onBack} className="text-sm font-semibold" style={{ color: C.pitchDark }}>← Back to summary</button> : <div />}
+        <div className="flex items-center gap-2 flex-wrap">
+          {!isSeason && <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={inputStyle} className={`${inputClass} w-auto`} />}
+          <ExportButton onExport={() => exportPlayerStatementPDF(teamName, player, month, stats, isSeason ? "Full season to date" : undefined, filterInfo)} />
+          <Button variant="ghost" onClick={() => window.print()}>🖨 Print</Button>
+          {allowEmail && (player.parentEmail ? (
+            <Button variant="ghost" disabled={emailBusy} onClick={emailWithPdf}>{emailBusy ? <Spinner size={14} /> : "✉"} Email to parent</Button>
+          ) : (
+            <span className="text-xs font-semibold px-3 py-2" style={{ color: C.inkSoft }} title="Add a parent email on the Roster tab to enable this">✉ No parent email on file</span>
+          ))}
+        </div>
+      </div>
+      {monthHint && !isSeason && (
+        <p className="text-xs mb-3 print:hidden" style={{ color: C.inkSoft }}>📅 Pick a different month above to see past statements.</p>
+      )}
+      {emailHint && (
+        <div className="rounded-xl p-3 mb-4 print:hidden text-sm font-semibold" style={{ background: C.pitchTint, color: C.pitchDark }}>
+          📎 The PDF just downloaded — attach it to the email that opened before you hit send.
+        </div>
+      )}
+      <div className="rounded-2xl p-6" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <div className="flex items-start justify-between flex-wrap gap-3 border-b pb-4 mb-4" style={{ borderColor: C.lineSoft }}>
+          <div className="flex items-center gap-3">
+            {jerseyNo != null && <JerseyBadge n={jerseyNo} />}
+            <div><p className="text-lg font-black" style={{ color: C.ink }}>{player.name}</p><p className="text-xs" style={{ color: C.inkSoft }}>Statement · {isSeason ? "Full season to date" : monthLabel(month)}</p></div>
+          </div>
+          <div className="text-right"><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Ending balance</p><MoneyText value={stats.ending} size="lg" /></div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+          <div className="rounded-xl p-3" style={{ background: C.lineSoft }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Beginning balance</p><MoneyText value={stats.beginning} /></div>
+          <div className="rounded-xl p-3" style={{ background: C.debitTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Debits (charges)</p><span className="text-base font-bold" style={{ color: C.debit }}>{fmtMoney(stats.debits)}</span></div>
+          <div className="rounded-xl p-3" style={{ background: C.creditTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credits (paid)</p><span className="text-base font-bold" style={{ color: C.credit }}>{fmtMoney(stats.credits)}</span></div>
+        </div>
+        {isSeason && stats.rows.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap mb-4 print:hidden">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Show</span>
+            <select value={activeFilter} onChange={(e) => setFilter(e.target.value)} style={{ ...inputStyle, width: "auto" }} className="rounded-lg px-3 py-2 text-sm outline-none">
+              <option value="all">All activity</option>
+              <option value="debit|*">All charges</option>
+              <option value="credit|*">All payments</option>
+              {debitCats.length > 0 && <optgroup label="Charges by category">{debitCats.map((c) => <option key={"d" + c} value={"debit|" + c}>{c}</option>)}</optgroup>}
+              {creditCats.length > 0 && <optgroup label="Payments by category">{creditCats.map((c) => <option key={"c" + c} value={"credit|" + c}>{c}</option>)}</optgroup>}
+            </select>
+            {filterInfo && <button onClick={() => setFilter("all")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear filter</button>}
+          </div>
+        )}
+        {filterInfo && (
+          <div className="rounded-xl p-3 mb-4 flex items-center justify-between flex-wrap gap-2" style={{ background: filterInfo.direction === "debit" ? C.debitTint : C.creditTint }}>
+            <span className="text-sm font-semibold" style={{ color: filterInfo.direction === "debit" ? C.debit : C.credit }}>{filterInfo.label} · {filterInfo.rows.length} {filterInfo.rows.length === 1 ? "entry" : "entries"}</span>
+            <span><span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft, marginRight: 8 }}>Total</span><span className="text-lg font-black" style={{ color: filterInfo.direction === "debit" ? C.debit : C.credit, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(filterInfo.total)}</span></span>
+          </div>
+        )}
+        {visibleRows.length === 0 ? <p className="text-sm text-center py-6" style={{ color: C.inkSoft }}>{filterInfo ? "No matching transactions." : isSeason ? "No activity yet this season." : "No activity this month."}</p> : (
+          <div>
+          <p className="scroll-hint items-center gap-1.5 text-xs font-semibold mb-2" style={{ color: C.inkSoft }}>↔ Swipe to see all columns</p>
+          <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ color: C.inkSoft }}><th className="font-semibold pb-2">Date</th><th className="font-semibold pb-2">Category</th><th className="font-semibold pb-2">Description</th><th className="font-semibold pb-2 text-right">Debit</th><th className="font-semibold pb-2 text-right">Credit</th>{!filterInfo && <th className="font-semibold pb-2 text-right">Balance</th>}</tr></thead>
+            <tbody>{visibleRows.map((t) => (
+              <tr key={t.id} className="border-t" style={{ borderColor: C.lineSoft }}>
+                <td className="py-2" style={{ color: C.ink }}>{t.date}</td><td className="py-2" style={{ color: C.ink }}>{t.category}</td><td className="py-2" style={{ color: C.inkSoft }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
+                <td className="py-2 text-right font-semibold" style={{ color: C.debit }}>{t.direction === "debit" ? fmtMoney(t.amount) : ""}</td>
+                <td className="py-2 text-right font-semibold" style={{ color: C.credit }}>{t.direction === "credit" ? fmtMoney(t.amount) : ""}</td>
+                {!filterInfo && <td className="py-2 text-right font-bold" style={{ color: C.ink, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(t.running)}</td>}
+              </tr>
+            ))}</tbody>
+          </table>
+          </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Landing
+---------------------------------------------------------------- */
+/* ---------------------------------------------------------------
+   Admin gate
+---------------------------------------------------------------- */
+/* ---------------------------------------------------------------
+   Admin: Roster tab
+---------------------------------------------------------------- */
+function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updatePlayer, deletePlayer, onOpenStatement }) {
+  const [showAdd, setShowAdd] = useState(false); const [query, setQuery] = useState(""); const [copiedId, setCopiedId] = useState(null);
+  const [form, setForm] = useState({ name: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
+  const resetForm = () => setForm({ name: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
+  const submitAdd = async () => {
+    if (!form.name.trim()) return;
+    await addPlayer({ name: form.name.trim(), parentName: form.parentName.trim(), parentEmail: form.parentEmail.trim(), parentName2: form.parentName2.trim(), parentEmail2: form.parentEmail2.trim(), openingBalance: parseFloat(form.openingBalance) || 0, active: true, notes: form.notes.trim() });
+    resetForm(); setShowAdd(false);
+  };
+  const filtered = players.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
+
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const startEdit = (p) => {
+    setShowAdd(false); setShowImport(false);
+    setEditingId(p.id);
+    setEditForm({ name: p.name || "", parentName: p.parentName || "", parentEmail: p.parentEmail || "", parentName2: p.parentName2 || "", parentEmail2: p.parentEmail2 || "", notes: p.notes || "" });
+  };
+  const saveEdit = async () => {
+    if (!editForm.name.trim()) return;
+    await updatePlayer(editingId, { name: editForm.name.trim(), parentName: editForm.parentName.trim(), parentEmail: editForm.parentEmail.trim(), parentName2: editForm.parentName2.trim(), parentEmail2: editForm.parentEmail2.trim(), notes: editForm.notes.trim() });
+    setEditingId(null); setEditForm(null);
+  };
+
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const existingNames = useMemo(() => new Set(players.map((p) => p.name.trim().toLowerCase())), [players]);
+  const importPreview = useMemo(() => (importText.trim() ? buildImportPreview(importText, existingNames) : null), [importText, existingNames]);
+  const validItems = importPreview && !importPreview.error ? importPreview.items.filter((it) => it.valid) : [];
+  const invalidCount = importPreview && !importPreview.error ? importPreview.items.length - validItems.length : 0;
+  const duplicateCount = validItems.filter((it) => it.duplicate).length;
+
+  const onFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setImportText(String(reader.result || ""));
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+  const confirmImport = async () => {
+    if (validItems.length === 0) return;
+    setImportBusy(true); setImportMsg("");
+    try {
+      await addPlayersBulk(validItems.map((it) => ({ name: it.name, parentName: it.parentName, parentEmail: it.parentEmail, parentName2: it.parentName2, parentEmail2: it.parentEmail2, openingBalance: it.openingBalance, active: true, notes: it.notes })));
+      setImportMsg(`Imported ${validItems.length} player${validItems.length === 1 ? "" : "s"}.`);
+      setImportText("");
+    } catch (e) { setImportMsg("Something went wrong — please try again."); }
+    setImportBusy(false);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍 Search players…" style={inputStyle} className="rounded-lg px-3 py-2 text-sm outline-none w-56" />
+        <div className="flex items-center gap-2">
+          <ExportButton onExport={() => exportRosterPDF(teamName, players, ledger)} />
+          <Button variant="ghost" onClick={() => { setShowImport((s) => !s); setShowAdd(false); setEditingId(null); }}>⬆ Import</Button>
+          <Button onClick={() => { setShowAdd((s) => !s); setShowImport(false); setEditingId(null); }}>+ Add player</Button>
+        </div>
+      </div>
+      {showImport && (
+        <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="font-black mb-1" style={{ color: C.ink }}>Import players</p>
+          <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Paste rows straight from a spreadsheet, or upload a CSV file. Include a header row — <b>Name</b> is required; Parent Name, Parent Email, Parent Name 2, Parent Email 2, Opening Balance, and Notes are optional.</p>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
+              📄 Choose CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
+            </label>
+            <button onClick={downloadImportTemplate} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Download template</button>
+          </div>
+          <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={5} placeholder={"Name, Parent Name, Parent Email, Opening Balance, Notes\nJordan Smith, Alex Smith, alex@example.com, 0,"} style={inputStyle} className="w-full rounded-lg px-3 py-2 text-sm outline-none font-mono" />
+
+          {importPreview && importPreview.error && <p className="text-xs font-semibold mt-2" style={{ color: C.debit }}>{importPreview.error}</p>}
+
+          {importPreview && !importPreview.error && importPreview.items.length > 0 && (<>
+            <div className="flex items-center gap-4 mt-3 mb-2 flex-wrap text-xs font-semibold">
+              <span style={{ color: C.credit }}>{validItems.length} ready to import</span>
+              {invalidCount > 0 && <span style={{ color: C.debit }}>{invalidCount} skipped (missing name)</span>}
+              {duplicateCount > 0 && <span style={{ color: C.amber }}>{duplicateCount} possible duplicate{duplicateCount === 1 ? "" : "s"} of existing players</span>}
+            </div>
+            <div className="rounded-xl mb-3" style={{ border: `1px solid ${C.line}`, maxHeight: 260, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <table className="w-full text-sm" style={{ minWidth: 560 }}>
+                <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-3 py-2">Name</th><th className="font-semibold px-3 py-2">Parent(s)</th><th className="font-semibold px-3 py-2">Email(s)</th><th className="font-semibold px-3 py-2 text-right">Opening</th><th className="font-semibold px-3 py-2">Status</th></tr></thead>
+                <tbody>{importPreview.items.map((it, i) => (
+                  <tr key={i} className="border-t" style={{ borderColor: C.lineSoft, opacity: it.valid ? 1 : 0.5 }}>
+                    <td className="px-3 py-2 font-semibold" style={{ color: C.ink }}>{it.name || "—"}</td>
+                    <td className="px-3 py-2" style={{ color: C.inkSoft }}>{[it.parentName, it.parentName2].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="px-3 py-2" style={{ color: C.inkSoft }}>{[it.parentEmail, it.parentEmail2].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="px-3 py-2 text-right" style={{ color: C.inkSoft, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(it.openingBalance)}</td>
+                    <td className="px-3 py-2 text-xs font-semibold" style={{ color: !it.valid ? C.debit : it.duplicate ? C.amber : C.credit }}>{!it.valid ? "Missing name" : it.duplicate ? "Possible duplicate" : "Ready"}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          </>)}
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button disabled={importBusy || validItems.length === 0} onClick={confirmImport}>{importBusy ? <Spinner size={14} color="#fff" /> : "⬆"} Import {validItems.length || ""} player{validItems.length === 1 ? "" : "s"}</Button>
+            <Button variant="ghost" onClick={() => { setShowImport(false); setImportText(""); setImportMsg(""); }}>Cancel</Button>
+            {importMsg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{importMsg}</p>}
+          </div>
+        </div>
+      )}
+      {showAdd && (
+        <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="font-black mb-3" style={{ color: C.ink }}>New player</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Player name"><TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></Field>
+            <Field label="Opening balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
+            <Field label="Parent/guardian name"><TextInput value={form.parentName} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></Field>
+            <Field label="Parent email"><TextInput type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} /></Field>
+            <Field label="Second parent/guardian name (optional)"><TextInput value={form.parentName2} onChange={(e) => setForm({ ...form, parentName2: e.target.value })} /></Field>
+            <Field label="Second parent email (optional)"><TextInput type="email" value={form.parentEmail2} onChange={(e) => setForm({ ...form, parentEmail2: e.target.value })} /></Field>
+            <div className="sm:col-span-2"><Field label="Notes" hint="e.g. payment plan details, fee waivers"><TextInput value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
+          </div>
+          <div className="flex gap-2 mt-4"><Button onClick={submitAdd}>✓ Add player</Button><Button variant="ghost" onClick={() => { setShowAdd(false); resetForm(); }}>Cancel</Button></div>
+        </div>
+      )}
+      {editingId && editForm && (
+        <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.pitch}` }}>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Edit player</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Player name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+            <div />
+            <Field label="Parent/guardian name"><TextInput value={editForm.parentName} onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })} /></Field>
+            <Field label="Parent email"><TextInput type="email" value={editForm.parentEmail} onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })} /></Field>
+            <Field label="Second parent/guardian name (optional)"><TextInput value={editForm.parentName2} onChange={(e) => setEditForm({ ...editForm, parentName2: e.target.value })} /></Field>
+            <Field label="Second parent email (optional)"><TextInput type="email" value={editForm.parentEmail2} onChange={(e) => setEditForm({ ...editForm, parentEmail2: e.target.value })} /></Field>
+            <div className="sm:col-span-2"><Field label="Notes"><TextInput value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} /></Field></div>
+          </div>
+          <div className="flex gap-2 mt-4"><Button onClick={saveEdit}>✓ Save changes</Button><Button variant="ghost" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</Button></div>
+        </div>
+      )}
+      {players.length === 0 ? <EmptyState title="No players yet" body="Add your first player to start tracking fees and payments." /> : (
+        <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Parent contact</th><th className="font-semibold px-4 py-3">Parent portal</th><th className="font-semibold px-4 py-3 text-right">Balance</th><th className="font-semibold px-4 py-3 text-right">Actions</th></tr></thead>
+            <tbody>{filtered.map((p, i) => (
+              <tr key={p.id} className="border-t" style={{ borderColor: C.lineSoft, opacity: p.active ? 1 : 0.5 }}>
+                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={i + 1} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
+                <td className="px-4 py-3" style={{ color: C.inkSoft }}>
+                  <div>{p.parentName || "—"}</div>{p.parentEmail && <div className="text-xs">{p.parentEmail}</div>}
+                  {(p.parentName2 || p.parentEmail2) && <div className="mt-1">{p.parentName2 || "—"}</div>}{p.parentEmail2 && <div className="text-xs">{p.parentEmail2}</div>}
+                </td>
+                <td className="px-4 py-3">{p.parentEmail || p.parentEmail2 ? (
+                  <a href={buildAccessCodeMailto(teamName, p)} title="Email the parent(s) how to sign in" className="text-xs font-semibold" style={{ color: C.pitchDark, textDecoration: "none" }}>✉ Send invite</a>
+                ) : (
+                  <span className="text-xs" title="Parents sign in with the email on file. Add one to give them access." style={{ color: C.debit }}>⚠ No email</span>
+                )}</td>
+                <td className="px-4 py-3 text-right"><MoneyText value={ledger.currentBalance(p.id)} /></td>
+                <td className="px-4 py-3"><div className="flex items-center justify-end gap-3">
+                  <button onClick={() => startEdit(p)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
+                  <button onClick={() => updatePlayer(p.id, { active: !p.active })} className="text-xs font-semibold" style={{ color: C.pitchDark }}>{p.active ? "Deactivate" : "Reactivate"}</button>
+                  <button onClick={() => { if (confirm("Delete this player? Players with any transaction history can't be deleted. Deactivate them instead.")) deletePlayer(p.id); }} title="Delete player" style={{ color: C.debit }}>🗑</button>
+                </div></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin: Transactions tab
+---------------------------------------------------------------- */
+function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, deleteTxn, updateTxn, presetPlayerId }) {
+  const [mode, setMode] = useState("single");
+  const [form, setForm] = useState({ playerId: presetPlayerId || (players[0]?.id ?? ""), date: todayStr(), direction: "debit", category: DEBIT_CATEGORIES[0], amount: "", description: "" });
+  const [bulkForm, setBulkForm] = useState({ date: todayStr(), direction: "debit", category: DEBIT_CATEGORIES[0], amount: "", description: "", itemize: false, lines: defaultCoachLines() });
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkQuery, setBulkQuery] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
+  const [filterPlayer, setFilterPlayer] = useState("all"); const [filterMonth, setFilterMonth] = useState("");
+  useEffect(() => { if (presetPlayerId) setForm((f) => ({ ...f, playerId: presetPlayerId })); }, [presetPlayerId]);
+  const cats = form.direction === "debit" ? DEBIT_CATEGORIES : CREDIT_CATEGORIES;
+  const bulkCats = bulkForm.direction === "debit" ? DEBIT_CATEGORIES : CREDIT_CATEGORIES;
+  const bulkItemized = bulkForm.itemize && bulkForm.direction === "debit";
+  const bulkSplit = computeSplit(bulkForm.lines, selectedIds.size);
+  // Choosing "Coach Fee" turns on the itemized split (Hotel / Mileage / Food) automatically.
+  const changeBulkCategory = (cat) => setBulkForm((f) => {
+    const isCoach = cat === "Coach Fee" && f.direction === "debit";
+    const hasEntered = f.lines.some((l) => String(l.amount).trim() !== "");
+    return { ...f, category: cat, itemize: isCoach, lines: isCoach && !hasEntered ? defaultCoachLines() : f.lines };
+  });
+  const numberOf = useMemo(() => players.reduce((acc, p, idx) => (acc[p.id] = idx + 1, acc), {}), [players]);
+
+  const submit = async () => {
+    if (!form.playerId || !form.amount || Number(form.amount) <= 0) return;
+    await addTxn({ playerId: form.playerId, date: form.date, direction: form.direction, category: form.category, amount: parseFloat(form.amount), description: form.description.trim(), createdAt: Date.now() });
+    setForm({ ...form, amount: "", description: "" });
+  };
+
+  const [editingTxnId, setEditingTxnId] = useState(null);
+  const [editTxnForm, setEditTxnForm] = useState(null);
+  const editTxnCats = editTxnForm?.direction === "debit" ? DEBIT_CATEGORIES : CREDIT_CATEGORIES;
+  const editItemized = !!editTxnForm && editTxnForm.direction === "debit" && editTxnForm.itemize;
+  const editSplit = editTxnForm ? computeSplit(editTxnForm.lines, editTxnForm.players) : null;
+  const legacyEditCat = editTxnForm && editTxnForm.category && !editTxnCats.includes(editTxnForm.category) ? editTxnForm.category : null;
+  const startEditTxn = (t) => {
+    setEditingTxnId(t.id);
+    const b = hasBreakdown(t) ? t.breakdown : null;
+    setEditTxnForm({
+      playerId: t.playerId, date: t.date, direction: t.direction, category: t.category, amount: String(t.amount), description: t.description || "",
+      itemize: !!b, hadBreakdown: !!b,
+      lines: b ? b.lines.map((l) => ({ label: l.label, amount: String(l.amount), note: l.note || "" })) : (t.category === "Coach Fee" ? defaultCoachLines() : [{ label: "", amount: "", note: "" }]),
+      players: b ? String(b.players) : "",
+    });
+  };
+  const saveEditTxn = async () => {
+    if (!editTxnForm.playerId) return;
+    const itemized = editTxnForm.direction === "debit" && editTxnForm.itemize;
+    const split = computeSplit(editTxnForm.lines, editTxnForm.players);
+    let amount;
+    if (itemized) { if (split.total <= 0 || split.players <= 0) return; amount = split.share; }
+    else { if (!editTxnForm.amount || Number(editTxnForm.amount) <= 0) return; amount = parseFloat(editTxnForm.amount); }
+    const patch = { playerId: editTxnForm.playerId, date: editTxnForm.date, direction: editTxnForm.direction, category: editTxnForm.category, amount, description: editTxnForm.description.trim() };
+    if (itemized) patch.breakdown = { lines: split.lines, total: split.total, players: split.players, share: split.share, exact: split.exact };
+    else if (editTxnForm.hadBreakdown) patch.breakdown = null;
+    await updateTxn(editingTxnId, patch);
+    setEditingTxnId(null); setEditTxnForm(null);
+  };
+
+  const bulkFiltered = players.filter((p) => p.name.toLowerCase().includes(bulkQuery.toLowerCase()));
+  const toggleOne = (id) => setSelectedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const selectAllFiltered = () => setSelectedIds((prev) => { const next = new Set(prev); bulkFiltered.forEach((p) => next.add(p.id)); return next; });
+  const clearAllFiltered = () => setSelectedIds((prev) => { const next = new Set(prev); bulkFiltered.forEach((p) => next.delete(p.id)); return next; });
+  const selectActiveOnly = () => setSelectedIds(new Set(players.filter((p) => p.active).map((p) => p.id)));
+
+  const submitBulk = async () => {
+    if (selectedIds.size === 0) return;
+    if (bulkItemized ? bulkSplit.total <= 0 : (!bulkForm.amount || Number(bulkForm.amount) <= 0)) return;
+    setBulkBusy(true); setBulkMsg("");
+    try {
+      const ids = Array.from(selectedIds);
+      const amount = bulkItemized ? bulkSplit.share : parseFloat(bulkForm.amount);
+      const base = { date: bulkForm.date, direction: bulkForm.direction, category: bulkForm.category, amount, description: bulkForm.description.trim(), createdAt: Date.now() };
+      if (bulkItemized) base.breakdown = { lines: bulkSplit.lines, total: bulkSplit.total, players: bulkSplit.players, share: bulkSplit.share, exact: bulkSplit.exact };
+      await addBulkTxn(ids, base);
+      setBulkMsg(`${bulkForm.direction === "debit" ? "Charged" : "Credited"} ${ids.length} player${ids.length === 1 ? "" : "s"} ${fmtMoney(amount)} each.`);
+      setSelectedIds(new Set());
+      setBulkForm({ ...bulkForm, amount: "", description: "", lines: defaultCoachLines() });
+    } catch (e) { setBulkMsg("Something went wrong — please try again."); }
+    setBulkBusy(false);
+  };
+
+  const playerName = (id) => players.find((p) => p.id === id)?.name || "—";
+  const rows = transactions.filter((t) => filterPlayer === "all" || t.playerId === filterPlayer).filter((t) => !filterMonth || t.date.slice(0, 7) === filterMonth).sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
+
+  return (
+    <div>
+      <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <p className="font-black" style={{ color: C.ink }}>Log a transaction</p>
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+            <button onClick={() => setMode("single")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "single" ? C.pitchTint : "transparent", color: mode === "single" ? C.pitchDark : C.inkSoft }}>Single</button>
+            <button onClick={() => setMode("bulk")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "bulk" ? C.pitchTint : "transparent", color: mode === "bulk" ? C.pitchDark : C.inkSoft }}>Bulk</button>
+          </div>
+        </div>
+
+        {players.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Add a player first on the Roster tab.</p> : mode === "single" ? (<>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <Field label="Player"><Select value={form.playerId} onChange={(e) => setForm({ ...form, playerId: e.target.value })}>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
+            <Field label="Date"><TextInput type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
+            <Field label="Type"><div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+              <button onClick={() => setForm({ ...form, direction: "debit", category: DEBIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: form.direction === "debit" ? C.debitTint : "transparent", color: form.direction === "debit" ? C.debit : C.inkSoft }}>Charge</button>
+              <button onClick={() => setForm({ ...form, direction: "credit", category: CREDIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: form.direction === "credit" ? C.creditTint : "transparent", color: form.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
+            </div></Field>
+            <Field label="Category"><Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            <Field label="Amount"><TextInput type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" /></Field>
+            <Field label="Description (optional)"><TextInput value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Spring tournament" /></Field>
+          </div>
+          <Button className="mt-4" onClick={submit}>+ Add transaction</Button>
+        </>) : (<>
+          <div className="grid sm:grid-cols-3 gap-3 mb-4">
+            <Field label="Date"><TextInput type="date" value={bulkForm.date} onChange={(e) => setBulkForm({ ...bulkForm, date: e.target.value })} /></Field>
+            <Field label="Type"><div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+              <button onClick={() => setBulkForm({ ...bulkForm, direction: "debit", category: DEBIT_CATEGORIES[0], itemize: false })} className="flex-1 py-2 text-sm font-semibold" style={{ background: bulkForm.direction === "debit" ? C.debitTint : "transparent", color: bulkForm.direction === "debit" ? C.debit : C.inkSoft }}>Charge</button>
+              <button onClick={() => setBulkForm({ ...bulkForm, direction: "credit", category: CREDIT_CATEGORIES[0], itemize: false })} className="flex-1 py-2 text-sm font-semibold" style={{ background: bulkForm.direction === "credit" ? C.creditTint : "transparent", color: bulkForm.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
+            </div></Field>
+            <Field label="Category"><Select value={bulkForm.category} onChange={(e) => changeBulkCategory(e.target.value)}>{bulkCats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            <Field label="Amount (each)">{bulkItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{bulkSplit.total > 0 && bulkSplit.players > 0 ? fmtMoney(bulkSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={bulkForm.amount} onChange={(e) => setBulkForm({ ...bulkForm, amount: e.target.value })} placeholder="0.00" />}</Field>
+            <div className="sm:col-span-2"><Field label="Description (optional)"><TextInput value={bulkForm.description} onChange={(e) => setBulkForm({ ...bulkForm, description: e.target.value })} placeholder="e.g. Fall registration" /></Field></div>
+          </div>
+          {bulkForm.direction === "debit" && (
+            <label className="flex items-center gap-2 text-sm mb-3" style={{ color: C.ink }}>
+              <input type="checkbox" checked={bulkForm.itemize} onChange={(e) => setBulkForm({ ...bulkForm, itemize: e.target.checked })} />
+              Itemize this charge and show families how it's calculated (split equally)
+            </label>
+          )}
+          {bulkItemized && <div className="mb-4"><BreakdownEditor lines={bulkForm.lines} setLines={(l) => setBulkForm({ ...bulkForm, lines: l })} playerCount={selectedIds.size} /></div>}
+
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Select players — {selectedIds.size} selected</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input value={bulkQuery} onChange={(e) => setBulkQuery(e.target.value)} placeholder="🔍 Search…" style={inputStyle} className="rounded-lg px-2 py-1 text-xs outline-none w-40" />
+              <button onClick={selectActiveOnly} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Active only</button>
+              <button onClick={selectAllFiltered} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Select all</button>
+              <button onClick={clearAllFiltered} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear</button>
+            </div>
+          </div>
+          <div className="rounded-xl mb-4" style={{ border: `1px solid ${C.line}`, maxHeight: 260, overflowY: "auto" }}>
+            {bulkFiltered.map((p) => (
+              <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 border-t" style={{ borderColor: C.lineSoft, cursor: "pointer", opacity: p.active ? 1 : 0.5 }}>
+                <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} />
+                <JerseyBadge n={numberOf[p.id]} />
+                <span className="text-sm font-semibold" style={{ color: C.ink }}>{p.name}</span>
+                {!p.active && <span className="text-xs" style={{ color: C.inkSoft }}>Inactive</span>}
+              </label>
+            ))}
+            {bulkFiltered.length === 0 && <p className="text-sm px-3 py-4" style={{ color: C.inkSoft }}>No players match.</p>}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button disabled={bulkBusy || selectedIds.size === 0} onClick={submitBulk}>{bulkBusy ? <Spinner size={14} color="#fff" /> : "+"} Apply to {selectedIds.size} player{selectedIds.size === 1 ? "" : "s"}</Button>
+            {bulkMsg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{bulkMsg}</p>}
+          </div>
+        </>)}
+      </div>
+      {editingTxnId && editTxnForm && (
+        <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.pitch}` }}>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Edit transaction</p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <Field label="Player"><Select value={editTxnForm.playerId} onChange={(e) => setEditTxnForm({ ...editTxnForm, playerId: e.target.value })}>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
+            <Field label="Date"><TextInput type="date" value={editTxnForm.date} onChange={(e) => setEditTxnForm({ ...editTxnForm, date: e.target.value })} /></Field>
+            <Field label="Type"><div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+              <button onClick={() => setEditTxnForm({ ...editTxnForm, direction: "debit", category: DEBIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: editTxnForm.direction === "debit" ? C.debitTint : "transparent", color: editTxnForm.direction === "debit" ? C.debit : C.inkSoft }}>Charge</button>
+              <button onClick={() => setEditTxnForm({ ...editTxnForm, direction: "credit", category: CREDIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: editTxnForm.direction === "credit" ? C.creditTint : "transparent", color: editTxnForm.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
+            </div></Field>
+            <Field label="Category"><Select value={editTxnForm.category} onChange={(e) => setEditTxnForm({ ...editTxnForm, category: e.target.value })}>{legacyEditCat && <option key={legacyEditCat} value={legacyEditCat}>{legacyEditCat} (previous label)</option>}{editTxnCats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            <Field label="Amount">{editItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{editSplit.total > 0 && editSplit.players > 0 ? fmtMoney(editSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={editTxnForm.amount} onChange={(e) => setEditTxnForm({ ...editTxnForm, amount: e.target.value })} />}</Field>
+            <Field label="Description (optional)"><TextInput value={editTxnForm.description} onChange={(e) => setEditTxnForm({ ...editTxnForm, description: e.target.value })} /></Field>
+          </div>
+          {editTxnForm.direction === "debit" && (
+            <div className="mt-4">
+              <label className="flex items-center gap-2 text-sm mb-3" style={{ color: C.ink }}>
+                <input type="checkbox" checked={editTxnForm.itemize} onChange={(e) => setEditTxnForm({ ...editTxnForm, itemize: e.target.checked })} />
+                Itemize this charge and show the family how it's calculated
+              </label>
+              {editItemized && <BreakdownEditor lines={editTxnForm.lines} setLines={(l) => setEditTxnForm({ ...editTxnForm, lines: l })} playerCount={editTxnForm.players} setPlayerCount={(v) => setEditTxnForm({ ...editTxnForm, players: v })} />}
+            </div>
+          )}
+          <div className="flex gap-2 mt-4"><Button onClick={saveEditTxn}>✓ Save changes</Button><Button variant="ghost" onClick={() => { setEditingTxnId(null); setEditTxnForm(null); }}>Cancel</Button></div>
+        </div>
+      )}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Select value={filterPlayer} onChange={(e) => setFilterPlayer(e.target.value)} className="w-auto"><option value="all">All players</option>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
+        <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={inputStyle} className={`${inputClass} w-auto`} />
+        {filterMonth && <button onClick={() => setFilterMonth("")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear month</button>}
+        <ExportButton onExport={() => exportTransactionsPDF(teamName, rows, playerName, filterMonth)} className="ml-auto" />
+      </div>
+      {rows.length === 0 ? <EmptyState title="No transactions" body="Logged fees, deposits, and payments will show up here." /> : (
+        <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Date</th><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Category</th><th className="font-semibold px-4 py-3">Description</th><th className="font-semibold px-4 py-3 text-right">Amount</th><th className="font-semibold px-4 py-3 text-right"></th></tr></thead>
+            <tbody>{rows.map((t) => (
+              <tr key={t.id} className="border-t" style={{ borderColor: C.lineSoft }}>
+                <td className="px-4 py-3" style={{ color: C.ink }}>{t.date}</td><td className="px-4 py-3 font-semibold" style={{ color: C.ink }}>{playerName(t.playerId)}</td>
+                <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: t.direction === "debit" ? C.debitTint : C.creditTint, color: t.direction === "debit" ? C.debit : C.credit }}>{t.category}</span></td>
+                <td className="px-4 py-3" style={{ color: C.inkSoft }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
+                <td className="px-4 py-3 text-right font-bold" style={{ color: t.direction === "debit" ? C.debit : C.credit, fontVariantNumeric: "tabular-nums" }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</td>
+                <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-3">
+                  <button onClick={() => startEditTxn(t)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
+                  <button onClick={() => { const r = prompt("Void this transaction? It stays in the history but stops counting toward the balance.\n\nReason (required):"); if (r && r.trim()) deleteTxn(t.id, r.trim()); }} title="Void" className="text-xs font-semibold" style={{ color: C.debit }}>Void</button>
+                </div></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          </div>
+        </div>
+      )}
+      <VoidedList playerName={playerName} />
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin: Statements tab
+---------------------------------------------------------------- */
+function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedInitial }) {
+  const [month, setMonth] = useState(thisMonthStr());
+  const [openPlayerId, setOpenPlayerId] = useState(initialPlayerId || null);
+  useEffect(() => { if (initialPlayerId) { setOpenPlayerId(initialPlayerId); onConsumedInitial && onConsumedInitial(); } }, [initialPlayerId]);
+  const summary = players.map((p) => ({ player: p, ...ledger.monthStats(p.id, month) }));
+  const totals = summary.reduce((a, r) => ({ beginning: a.beginning + r.beginning, debits: a.debits + r.debits, credits: a.credits + r.credits, ending: a.ending + r.ending }), { beginning: 0, debits: 0, credits: 0, ending: 0 });
+
+  if (openPlayerId) {
+    const p = players.find((pl) => pl.id === openPlayerId);
+    const idx = players.findIndex((pl) => pl.id === openPlayerId);
+    if (!p) { setOpenPlayerId(null); return null; }
+    return <StatementDetail teamName={teamName} player={p} jerseyNo={idx + 1} month={month} setMonth={setMonth} stats={ledger.monthStats(p.id, month)} onBack={() => setOpenPlayerId(null)} allowEmail />;
+  }
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <p className="font-black" style={{ color: C.ink }}>Monthly statement — {monthLabel(month)}</p>
+        <div className="flex items-center gap-2">
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={inputStyle} className={`${inputClass} w-auto`} />
+          <ExportButton onExport={() => exportSummaryPDF(teamName, summary, totals, month)} />
+        </div>
+      </div>
+      {players.length === 0 ? <EmptyState title="Nothing to show yet" body="Add players and transactions to generate statements." /> : (
+        <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3 text-right">Beginning</th><th className="font-semibold px-4 py-3 text-right">Debits</th><th className="font-semibold px-4 py-3 text-right">Credits</th><th className="font-semibold px-4 py-3 text-right">Ending</th><th className="font-semibold px-4 py-3 text-right"></th></tr></thead>
+            <tbody>{summary.map((r, i) => (
+              <tr key={r.player.id} className="border-t" style={{ borderColor: C.lineSoft }}>
+                <td className="px-4 py-3"><button onClick={() => setOpenPlayerId(r.player.id)} className="flex items-center gap-2.5 font-bold hover:underline" style={{ color: C.ink }}><JerseyBadge n={i + 1} /> {r.player.name}</button></td>
+                <td className="px-4 py-3 text-right" style={{ color: C.inkSoft, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(r.beginning)}</td>
+                <td className="px-4 py-3 text-right font-semibold" style={{ color: C.debit }}>{r.debits ? fmtMoney(r.debits) : "—"}</td>
+                <td className="px-4 py-3 text-right font-semibold" style={{ color: C.credit }}>{r.credits ? fmtMoney(r.credits) : "—"}</td>
+                <td className="px-4 py-3 text-right"><MoneyText value={r.ending} /></td>
+                <td className="px-4 py-3 text-right"><button onClick={() => setOpenPlayerId(r.player.id)} style={{ color: C.inkSoft }}>›</button></td>
+              </tr>
+            ))}</tbody>
+            <tfoot><tr className="border-t-2" style={{ borderColor: C.line, background: C.lineSoft }}>
+              <td className="px-4 py-3 font-black" style={{ color: C.ink }}>Team total</td>
+              <td className="px-4 py-3 text-right font-bold" style={{ color: C.ink }}>{fmtMoney(totals.beginning)}</td>
+              <td className="px-4 py-3 text-right font-bold" style={{ color: C.debit }}>{fmtMoney(totals.debits)}</td>
+              <td className="px-4 py-3 text-right font-bold" style={{ color: C.credit }}>{fmtMoney(totals.credits)}</td>
+              <td className="px-4 py-3 text-right font-bold" style={{ color: C.ink }}>{fmtMoney(totals.ending)}</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin: Seasons (archive) panel
+---------------------------------------------------------------- */
+function SeasonsPanel({ teamName, players, transactions, onArchiveSeason }) {
+  const [archives, setArchives] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [label, setLabel] = useState("");
+  const [carryForward, setCarryForward] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+
+  const loadArchives = async () => {
+    setLoading(true);
+    try {
+      const snap = await window.db.collection("archives").where("teamId", "==", window.currentTeamId).get();
+      setArchives(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.archivedAt).localeCompare(String(a.archivedAt))));
+    } catch (e) { setArchives([]); }
+    setLoading(false);
+  };
+  useEffect(() => { loadArchives(); }, []);
+
+  const confirmArchive = async () => {
+    if (!confirm(`This moves all ${players.length} players and ${transactions.length} transactions into a permanent "${label.trim() || "Season archive"}" record and starts a fresh transaction list (the old entries stay saved in the history)${carryForward ? " (each player's current balance becomes their new opening balance)" : " and resets every player's balance to zero"}. This cannot be undone. Continue?`)) return;
+    setBusy(true); setMsg("");
+    try {
+      await onArchiveSeason(label, carryForward);
+      setMsg("Season archived — the live roster now starts fresh.");
+      setLabel(""); setShowForm(false);
+      await loadArchives();
+    } catch (e) { setMsg("Something went wrong — please try again."); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+      <p className="font-black mb-2" style={{ color: C.ink }}>Seasons</p>
+      <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Close out a season by moving its transaction history into a permanent, read-only record — the live roster and balances start clean for the next one. Players stay on the roster; only the transaction ledger and balances reset.</p>
+
+      {!showForm ? (
+        <Button variant="ghost" onClick={() => setShowForm(true)}>+ Archive current season</Button>
+      ) : (
+        <div className="rounded-xl p-4 mb-2" style={{ background: C.lineSoft }}>
+          <Field label="Season label" hint='e.g. "2025–2026 Fall Season"'>
+            <TextInput value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Season label" />
+          </Field>
+          <label className="flex items-center gap-2 mt-3 text-sm" style={{ color: C.ink }}>
+            <input type="checkbox" checked={carryForward} onChange={(e) => setCarryForward(e.target.checked)} />
+            Carry forward each player's current balance as their new opening balance
+          </label>
+          <div className="flex items-center gap-3 mt-4 flex-wrap">
+            <Button variant="danger" disabled={busy} onClick={confirmArchive}>{busy ? <Spinner size={14} /> : "📦"} Archive & start fresh</Button>
+            <Button variant="ghost" onClick={() => { setShowForm(false); setLabel(""); }}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {msg && <p className="text-sm font-semibold mt-2 mb-2" style={{ color: C.pitchDark }}>{msg}</p>}
+
+      <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Past seasons</p>
+        {loading ? <Spinner size={16} /> : archives.length === 0 ? (
+          <p className="text-sm" style={{ color: C.inkSoft }}>No archived seasons yet.</p>
+        ) : (
+          <div className="grid gap-2">
+            {archives.map((a) => {
+              const archivePlayers = a.players || [];
+              const archiveTransactions = a.transactions || [];
+              const archiveLedger = buildLedger(archivePlayers, archiveTransactions);
+              return (
+                <div key={a.id} className="rounded-xl p-3" style={{ border: `1px solid ${C.line}` }}>
+                  <button onClick={() => setExpandedId(expandedId === a.id ? null : a.id)} className="w-full flex items-center justify-between text-left">
+                    <div>
+                      <p className="font-bold text-sm" style={{ color: C.ink }}>{a.label}</p>
+                      <p className="text-xs" style={{ color: C.inkSoft }}>Archived {new Date(a.archivedAt).toLocaleDateString()} · {archivePlayers.length} players · {archiveTransactions.length} transactions</p>
+                    </div>
+                    <span style={{ color: C.inkSoft }}>{expandedId === a.id ? "▾" : "›"}</span>
+                  </button>
+                  {expandedId === a.id && (
+                    <div className="flex items-center gap-3 mt-3 pt-3 flex-wrap" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                      <ExportButton label="Roster PDF" onExport={() => exportRosterPDF(a.teamName || teamName, archivePlayers, archiveLedger)} />
+                      <Button variant="ghost" onClick={() => downloadBackupJSON(a.label, archivePlayers, archiveTransactions)}>⬇ Download JSON</Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin: Settings tab
+---------------------------------------------------------------- */
+function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, venmoUsername, setVenmoUsername, treasurerEmail, setTreasurerEmail, teamLogo, setTeamLogo, players, transactions, onRestoreBackup, onArchiveSeason }) {
+  const { checkPayableTo, setCheckPayableTo } = useContext(TeamCtx);
+  const [checkDraft, setCheckDraft] = useState(checkPayableTo || "");
+  useEffect(() => setCheckDraft(checkPayableTo || ""), [checkPayableTo]);
+  const [name, setName] = useState(teamName);
+  useEffect(() => setName(teamName), [teamName]);
+
+  const [logoBusy, setLogoBusy] = useState(false);
+  const onLogoFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setLogoBusy(true);
+    resizeImage(file).then((uri) => setTeamLogo(uri)).catch(() => alert("Couldn't read that image.")).finally(() => setLogoBusy(false));
+    e.target.value = "";
+  };
+
+  const [msgDraft, setMsgDraft] = useState(parentMessage);
+  useEffect(() => setMsgDraft(parentMessage), [parentMessage]);
+  const [msgSaved, setMsgSaved] = useState(false);
+  const saveMsg = async () => {
+    await setParentMessage(msgDraft);
+    setMsgSaved(true);
+    setTimeout(() => setMsgSaved(false), 1500);
+  };
+
+  const [venmoDraft, setVenmoDraft] = useState(venmoUsername);
+  useEffect(() => setVenmoDraft(venmoUsername), [venmoUsername]);
+  const [venmoSaved, setVenmoSaved] = useState(false);
+  const saveVenmo = async () => {
+    await setVenmoUsername(venmoDraft.trim().replace(/^@/, ""));
+    await setCheckPayableTo(checkDraft.trim());
+    setVenmoSaved(true);
+    setTimeout(() => setVenmoSaved(false), 1500);
+  };
+
+  const [emailDraft, setEmailDraft] = useState(treasurerEmail);
+  useEffect(() => setEmailDraft(treasurerEmail), [treasurerEmail]);
+  const [emailSaved, setEmailSaved] = useState(false);
+  const saveEmail = async () => {
+    await setTreasurerEmail(emailDraft.trim());
+    setEmailSaved(true);
+    setTimeout(() => setEmailSaved(false), 1500);
+  };
+
+  const [restorePreview, setRestorePreview] = useState(null);
+  const [restoreError, setRestoreError] = useState("");
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreMsg, setRestoreMsg] = useState("");
+
+  const onBackupFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setRestoreError(""); setRestoreMsg(""); setRestorePreview(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (!Array.isArray(parsed.players) || !Array.isArray(parsed.transactions)) throw new Error("bad shape");
+        setRestorePreview(parsed);
+      } catch (err) { setRestoreError("That doesn't look like a valid Team Treasury backup file."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+  const confirmRestore = async () => {
+    if (!restorePreview) return;
+    if (!confirm(`Import ${restorePreview.players.length} players and ${restorePreview.transactions.length} transactions from the backup dated ${new Date(restorePreview.exportedAt).toLocaleString()}?`)) return;
+    setRestoreBusy(true); setRestoreMsg("");
+    try {
+      const r = await onRestoreBackup(restorePreview);
+      setRestoreMsg(`Imported ${r.players} players and ${r.transactions} transactions.${r.skipped ? ` Skipped ${r.skipped} that didn't match a player.` : ""}`);
+      setRestorePreview(null);
+    } catch (err) { setRestoreMsg(err && err.message && err.message.startsWith("Import only") ? err.message : "Something went wrong. Please try again."); }
+    setRestoreBusy(false);
+  };
+
+  return (
+    <div className="grid gap-5 max-w-lg">
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-3" style={{ color: C.ink }}>Team name</p>
+        <div className="flex gap-2"><TextInput value={name} onChange={(e) => setName(e.target.value)} /><Button onClick={() => setTeamName(name)}>Save</Button></div>
+      </div>
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Team logo</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign-in screen and at the top of every page. A square image works best.</p>
+        <div className="flex items-center gap-4 flex-wrap">
+          {teamLogo ? <img src={teamLogo} alt="Team logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}`, fontSize: 32 }}>⚽</div>}
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
+              {logoBusy ? <Spinner size={14} /> : "📷"} {teamLogo ? "Replace image" : "Upload image"}
+              <input type="file" accept="image/*" className="hidden" onChange={onLogoFileChosen} />
+            </label>
+            {teamLogo && <button onClick={() => setTeamLogo("")} className="text-xs font-semibold" style={{ color: C.debit }}>Remove</button>}
+          </div>
+        </div>
+      </div>
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Parent portal message</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown to every parent on their player's account page — good for a quick note like an upcoming payment deadline or a reminder about tournament fees. Leave blank to hide it entirely.</p>
+        <TextArea rows={3} value={msgDraft} onChange={(e) => setMsgDraft(e.target.value)} placeholder="e.g. Fall registration fees are due September 15th." />
+        <div className="flex items-center gap-3 mt-3">
+          <Button onClick={saveMsg}>Save message</Button>
+          {msgSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
+        </div>
+      </div>
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Payment options (Venmo)</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Adds a "Make a Payment" button to every parent's account page. Leave the username blank to hide it.</p>
+        <Field label="Venmo username" hint="Just the username, no @ or full link needed">
+          <TextInput value={venmoDraft} onChange={(e) => setVenmoDraft(e.target.value)} placeholder="e.g. Jane-Smith" />
+        </Field>
+        <div className="mt-3"><Field label="Make checks payable to" hint="Optional. Shown to parents under the payment button.">
+          <TextInput value={checkDraft} onChange={(e) => setCheckDraft(e.target.value)} placeholder="e.g. Your Soccer Club" />
+        </Field></div>
+        <div className="flex items-center gap-3 mt-3">
+          <Button onClick={saveVenmo}>Save payment options</Button>
+          {venmoSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
+        </div>
+      </div>
+      <TeamAccessPanel />
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Contact info</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Adds a "Message the Treasurer" button to every parent's account page, pre-addressed to this email. Leave blank to hide it.</p>
+        <Field label="Treasurer email">
+          <TextInput type="email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} placeholder="you@example.com" />
+        </Field>
+        <div className="flex items-center gap-3 mt-3">
+          <Button onClick={saveEmail}>Save email</Button>
+          {emailSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
+        </div>
+      </div>
+      <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Backup & restore</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Download a complete copy of every player and transaction. Keep it somewhere safe (email it to yourself, save it to a drive) so you can recover everything if this site or your Firebase project is ever lost.</p>
+        <Button variant="ghost" onClick={() => downloadBackupJSON(teamName, players, transactions)}>⬇ Download full backup</Button>
+
+        <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+          <p className="font-black mb-1" style={{ color: C.ink }}>Import a backup</p>
+          <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Bring in players and transactions from a backup file, including one downloaded from the original app. Works only while this team has no players or transactions yet.</p>
+          <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
+            📄 Choose backup file<input type="file" accept=".json,application/json" className="hidden" onChange={onBackupFileChosen} />
+          </label>
+          {restoreError && <p className="text-xs font-semibold mt-2" style={{ color: C.debit }}>{restoreError}</p>}
+          {restorePreview && (
+            <div className="mt-3">
+              <p className="text-sm mb-3" style={{ color: C.ink }}>
+                Backup from <b>{new Date(restorePreview.exportedAt).toLocaleString()}</b> — {restorePreview.players.length} player{restorePreview.players.length === 1 ? "" : "s"}, {restorePreview.transactions.length} transaction{restorePreview.transactions.length === 1 ? "" : "s"}.
+              </p>
+              <Button variant="danger" disabled={restoreBusy} onClick={confirmRestore}>{restoreBusy ? <Spinner size={14} /> : "⬆"} Import this backup</Button>
+            </div>
+          )}
+          {restoreMsg && <p className="text-sm font-semibold mt-2" style={{ color: C.pitchDark }}>{restoreMsg}</p>}
+        </div>
+      </div>
+      <SeasonsPanel teamName={teamName} players={players} transactions={transactions} onArchiveSeason={onArchiveSeason} />
+      <div className="rounded-2xl p-5" style={{ background: C.navyTint, border: `1px solid ${C.line}` }}>
+        <p className="font-black mb-2" style={{ color: C.navy }}>Data & security</p>
+        <p className="text-sm" style={{ color: C.inkSoft }}>Records are protected by sign-in. Only people listed under Team access can see this team's records, parents see only their own player, and other teams can't see anything here. Transactions can't be deleted or silently changed. Edits and voids keep the original with who did it and why. Don't store bank account numbers or similar here.</p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin: Dashboard tab
+---------------------------------------------------------------- */
+function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
+  const stats = useMemo(() => {
+    let totalOwed = 0, totalCredit = 0;
+    const numberOf = players.reduce((acc, p, idx) => (acc[p.id] = idx + 1, acc), {});
+    const balances = players.map((p) => ({ player: p, balance: ledger.currentBalance(p.id) }));
+    balances.forEach(({ balance }) => { if (balance < -0.004) totalOwed += -balance; else if (balance > 0.004) totalCredit += balance; });
+    const owing = balances.filter((b) => b.balance < -0.004).sort((a, b) => a.balance - b.balance).slice(0, 8);
+    const thisMonth = thisMonthStr();
+    let monthCharged = 0, monthCollected = 0;
+    transactions.forEach((t) => { if (t.date.slice(0, 7) === thisMonth) { if (t.direction === "debit") monthCharged += t.amount; else monthCollected += t.amount; } });
+    const recent = [...transactions].sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0, 8);
+    return { totalOwed, totalCredit, owing, monthCharged, monthCollected, recent, numberOf, activeCount: players.filter((p) => p.active).length };
+  }, [players, transactions, ledger]);
+
+  const playerName = (id) => players.find((p) => p.id === id)?.name || "—";
+
+  return (
+    <div>
+      <div className="grid sm:grid-cols-4 gap-3 mb-5">
+        <div className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Active players</p>
+          <p className="text-2xl font-black" style={{ color: C.ink }}>{stats.activeCount}</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: C.debitTint }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Total outstanding</p>
+          <p className="text-2xl font-black" style={{ color: C.debit }}>{fmtMoney(stats.totalOwed)}</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: C.creditTint }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credit on file</p>
+          <p className="text-2xl font-black" style={{ color: C.credit }}>{fmtMoney(stats.totalCredit)}</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Collected this month</p>
+          <p className="text-2xl font-black" style={{ color: C.ink }}>{fmtMoney(stats.monthCollected)}</p>
+          <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{fmtMoney(stats.monthCharged)} charged</p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-5">
+        <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Players with a balance due</p>
+          {stats.owing.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nobody currently owes anything. 🎉</p> : (
+            <div className="grid gap-1">
+              {stats.owing.map(({ player, balance }) => (
+                <button key={player.id} onClick={() => onOpenStatement(player.id)} className="flex items-center justify-between py-2 px-1 rounded-lg hover:opacity-80" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                  <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: C.ink }}><JerseyBadge n={stats.numberOf[player.id]} /> {player.name}</span>
+                  <MoneyText value={balance} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Recent activity</p>
+          {stats.recent.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>No transactions logged yet.</p> : (
+            <div className="grid gap-1">
+              {stats.recent.map((t) => (
+                <div key={t.id} className="flex items-center justify-between py-2 px-1 text-sm" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                  <div>
+                    <p className="font-semibold" style={{ color: C.ink }}>{playerName(t.playerId)}</p>
+                    <p className="text-xs" style={{ color: C.inkSoft }}>{t.date} · {t.category}</p>
+                  </div>
+                  <span className="font-bold" style={{ color: t.direction === "debit" ? C.debit : C.credit }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Admin shell
+---------------------------------------------------------------- */
+function AdminShell({ teamName, setTeamName, parentMessage, setParentMessage, venmoUsername, setVenmoUsername, treasurerEmail, setTreasurerEmail, teamLogo, setTeamLogo, players, transactions, addPlayer, addPlayersBulk, updatePlayer, deletePlayer, addTxn, addBulkTxn, deleteTxn, updateTxn, onLock, onRestoreBackup, onArchiveSeason }) {
+  const { canSwitch, onSwitchTeam, me } = useContext(TeamCtx);
+  const [tab, setTab] = useState("dashboard");
+  const [statementPlayerId, setStatementPlayerId] = useState(null);
+  const [txnPresetPlayer] = useState(null);
+  const ledger = useLedger(players, transactions);
+  const tabs = [["dashboard", "Dashboard"], ["roster", "Roster"], ["transactions", "Transactions"], ["statements", "Statements"], ["settings", "Settings"]];
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{canSwitch && <button onClick={onSwitchTeam} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Switch team</button>}<button onClick={onLock} title={me} className="text-sm font-semibold" style={{ color: C.inkSoft }}>Sign out</button></div>
+      </header>
+      <nav className="flex gap-1 px-5 pt-4 print:hidden tab-scroll">
+        {tabs.map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} className="px-3.5 py-2 rounded-t-lg text-sm font-semibold" style={{ background: tab === id ? C.surface : "transparent", color: tab === id ? C.pitchDark : C.inkSoft, border: tab === id ? `1px solid ${C.line}` : "1px solid transparent", borderBottom: tab === id ? `1px solid ${C.surface}` : "1px solid transparent", marginBottom: -1 }}>{label}</button>
+        ))}
+      </nav>
+      <main className="p-5" style={{ borderTop: `1px solid ${C.line}` }}>
+        {tab === "dashboard" && <DashboardTab players={players} transactions={transactions} ledger={ledger} onOpenStatement={(id) => { setStatementPlayerId(id); setTab("statements"); }} />}
+        {tab === "roster" && <RosterTab teamName={teamName} players={players} ledger={ledger} addPlayer={addPlayer} addPlayersBulk={addPlayersBulk} updatePlayer={updatePlayer} deletePlayer={deletePlayer} onOpenStatement={(id) => { setStatementPlayerId(id); setTab("statements"); }} />}
+        {tab === "transactions" && <TransactionsTab teamName={teamName} players={players} transactions={transactions} addTxn={addTxn} addBulkTxn={addBulkTxn} deleteTxn={deleteTxn} updateTxn={updateTxn} presetPlayerId={txnPresetPlayer} />}
+        {tab === "statements" && <StatementsTab teamName={teamName} players={players} ledger={ledger} initialPlayerId={statementPlayerId} onConsumedInitial={() => setStatementPlayerId(null)} />}
+        {tab === "settings" && <SettingsTab teamName={teamName} setTeamName={setTeamName} parentMessage={parentMessage} setParentMessage={setParentMessage} venmoUsername={venmoUsername} setVenmoUsername={setVenmoUsername} treasurerEmail={treasurerEmail} setTreasurerEmail={setTreasurerEmail} teamLogo={teamLogo} setTeamLogo={setTeamLogo} players={players} transactions={transactions} onRestoreBackup={onRestoreBackup} onArchiveSeason={onArchiveSeason} />}
+      </main>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Parent portal
+---------------------------------------------------------------- */
+/* ---------------------------------------------------------------
+   Coach view (balances only)
+---------------------------------------------------------------- */
+function CoachView({ teamName, players, transactions, onLogout }) {
+  const ledger = useLedger(players, transactions);
+  const roster = players.filter((p) => p.active);
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
+        <button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft, flexShrink: 0 }}>Sign out</button>
+      </header>
+      <main className="p-5 max-w-2xl mx-auto">
+        <p className="font-black text-lg" style={{ color: C.ink }}>Player balances</p>
+        <p className="text-xs mb-4" style={{ color: C.inkSoft }}>Current balance for each active player.</p>
+        {roster.length === 0 ? (
+          <EmptyState title="No players yet" body="Active players will show up here once they're added to the roster." />
+        ) : (
+          <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+            {roster.map((p, i) => {
+              const bal = ledger.currentBalance(p.id);
+              const status = bal < -0.004 ? "Amount due" : bal > 0.004 ? "Credit balance" : "Paid in full";
+              return (
+                <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderTop: i === 0 ? "none" : `1px solid ${C.lineSoft}` }}>
+                  <span className="font-semibold text-sm min-w-0" style={{ color: C.ink }}>{p.name}</span>
+                  <div className="text-right" style={{ flexShrink: 0 }}>
+                    <MoneyText value={bal} />
+                    <p className="text-xs" style={{ color: C.inkSoft }}>{status}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, players, transactions, playerId, onLogout, onSwitch }) {
+  const { checkPayableTo } = useContext(TeamCtx);
+  const ledger = useLedger(players, transactions);
+  const [month, setMonth] = useState(thisMonthStr());
+  const [showPay, setShowPay] = useState(false);
+  const [view, setView] = useState("month");
+  const player = players.find((p) => p.id === playerId);
+  const idx = players.findIndex((p) => p.id === playerId);
+  if (!player) return null;
+  const stats = view === "season" ? ledger.seasonStats(playerId) : ledger.monthStats(playerId, month);
+  const balance = ledger.currentBalance(playerId);
+  const label = balance < -0.004 ? "Amount due" : balance > 0.004 ? "Credit balance" : "Paid in full";
+  const venmoLink = venmoUsername ? `https://venmo.com/${venmoUsername}?txn=pay&note=${encodeURIComponent(`${player.name} (${teamName})`)}` : null;
+  const treasurerMailto = treasurerEmail
+    ? `mailto:${treasurerEmail}?subject=${encodeURIComponent(`${teamName} — Question about ${player.name}'s account`)}`
+    : null;
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Switch player</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft }}>Sign out</button></div>
+      </header>
+      <main className="p-5 max-w-2xl mx-auto">
+        {parentMessage && parentMessage.trim() && (
+          <div className="rounded-2xl p-4 mb-5 print:hidden" style={{ background: C.pitchTint, border: `1px solid ${C.pitch}` }}>
+            <p className="text-sm" style={{ color: C.pitchDark, whiteSpace: "pre-wrap" }}>📣 {parentMessage}</p>
+          </div>
+        )}
+        <div className="rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style={{ background: C.navy, color: "#fff" }}>
+          <div><p className="font-black text-lg">{player.name}</p><p className="text-xs opacity-80">{label}</p></div>
+          <span className="text-2xl font-black" style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(Math.abs(balance))}</span>
+        </div>
+        {(venmoLink || treasurerMailto) && (
+          <div className="mb-5 print:hidden">
+            <div className="flex items-center gap-2 flex-wrap">
+              {venmoLink && <Button variant="dark" onClick={() => setShowPay((s) => !s)}>💳 Make a Payment</Button>}
+              {treasurerMailto && <Button variant="ghost" onClick={() => { window.location.href = treasurerMailto; }}>✉ Message the Treasurer</Button>}
+            </div>
+            {showPay && venmoLink && (
+              <div className="rounded-2xl p-5 mt-3" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+                <a href={venmoLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold" style={{ background: "#3D95CE", color: "#fff", textDecoration: "none" }}>
+                  Pay via Venmo ↗
+                </a>
+                <p className="text-xs mt-2" style={{ color: C.inkSoft }}>Opens Venmo to submit a payment. Use the ‘Message the Treasurer’ button to let them know if you want to pay by check or cash.{checkPayableTo ? ` Make checks payable to ‘${checkPayableTo}’.` : ""}</p>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="inline-flex rounded-lg overflow-hidden mb-4 print:hidden" style={{ border: `1px solid ${C.line}` }}>
+          <button onClick={() => setView("month")} className="px-3 py-2 text-sm font-semibold" style={{ background: view === "month" ? C.pitchTint : "transparent", color: view === "month" ? C.pitchDark : C.inkSoft }}>Monthly statement</button>
+          <button onClick={() => setView("season")} className="px-3 py-2 text-sm font-semibold" style={{ background: view === "season" ? C.pitchTint : "transparent", color: view === "season" ? C.pitchDark : C.inkSoft }}>Full season</button>
+        </div>
+        <StatementDetail teamName={teamName} player={player} month={month} setMonth={setMonth} stats={stats} period={view} monthHint />
+      </main>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Sign-in, teams, and data access
+   Security model (enforced by firestore.rules, not just this code):
+   - Treasurers/coaches sign in with Google (or an emailed link) and only
+     see teams they've been added to.
+   - Parents sign in with an emailed link and only see players whose
+     parent email on file matches theirs.
+---------------------------------------------------------------- */
+const TeamCtx = React.createContext({});
+const lc = (s) => String(s || "").trim().toLowerCase();
+const isEmail = (s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(lc(s));
+const guardianEmailsOf = (p) => [...new Set([lc(p.parentEmail), lc(p.parentEmail2)].filter(Boolean))];
+const LINK_EMAIL_KEY = "tt-signin-email", MODE_KEY = "tt-mode", TEAM_KEY = "tt-team", BRAND_KEY = "tt-brand";
+const store = {
+  get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { window.localStorage.removeItem(k); } catch (e) {} },
+};
+const siteUrl = () => window.location.origin + window.location.pathname;
+const urlParam = (k) => new URLSearchParams(window.location.search).get(k);
+// Remember which team's logo/name to show on the sign-in screen on this device.
+const rememberBrand = (teamId) => { if (teamId) store.set(BRAND_KEY, teamId); };
+const signOut = async () => { store.del(MODE_KEY); await window.auth.signOut(); };
+function friendlyAuthError(e) {
+  const code = (e && e.code) || "";
+  if (code === "auth/unauthorized-domain") return "This web address isn't approved in Firebase yet. Add it under Authentication → Settings → Authorized domains.";
+  if (code === "auth/operation-not-allowed") return "This sign-in method isn't turned on in Firebase yet (Authentication → Sign-in method).";
+  if (code === "auth/invalid-action-code" || code === "auth/expired-action-code") return "That sign-in link has expired or was already used. Request a new one.";
+  if (code === "auth/invalid-email") return "That email address doesn't match the one the link was sent to.";
+  if (code === "auth/popup-blocked") return "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.";
+  if (code === "auth/network-request-failed") return "Couldn't reach the server. Check your connection and try again.";
+  if (code === "auth/web-storage-unsupported") return "Your browser is blocking the storage sign-in needs (often a private window or 'block all cookies'). Try a regular window, or use the emailed link instead.";
+  if (code === "auth/account-exists-with-different-credential") return "This email already signed in a different way. Use 'Email me a sign-in link' instead.";
+  if (code === "auth/too-many-requests") return "Too many attempts. Wait a few minutes and try again.";
+  if (code === "auth/user-disabled") return "This account has been turned off in Firebase.";
+  if (code === "auth/admin-restricted-operation") return "This sign-in method isn't allowed for this project. Check Authentication → Sign-in method in Firebase.";
+  return "Something went wrong signing in. Please try again." + (code ? ` (Error: ${code})` : (e && e.message ? ` (${String(e.message).slice(0, 120)})` : ""));
+}
+async function commitWrites(writes) {
+  // writes: [(batch) => void]; Firestore batches max out at 500 operations.
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = window.db.batch();
+    writes.slice(i, i + 400).forEach((w) => w(batch));
+    await batch.commit();
+  }
+}
+// Shrink uploaded images so the team record stays small and fast to load.
+function resizeImage(file, max = 320) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function Shell({ children, onBack }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ background: C.bg }}>
+      <div className="w-full max-w-sm">
+        {onBack && <button onClick={onBack} className="text-sm font-semibold mb-6" style={{ color: C.inkSoft }}>← Back</button>}
+        <div className="rounded-2xl p-6" style={{ background: C.surface, border: `1px solid ${C.line}` }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+function TeamMark({ logo, size = 120 }) {
+  return logo
+    ? <img src={logo} alt="Team logo" className="mx-auto mb-5" style={{ width: size, height: size, objectFit: "contain" }} />
+    : <div className="mx-auto mb-5 rounded-2xl flex items-center justify-center" style={{ width: size, height: size, background: C.pitchTint, fontSize: size * 0.45 }}>⚽</div>;
+}
+
+function useBranding() {
+  const [brand, setBrand] = useState(null);
+  useEffect(() => {
+    const id = urlParam("team") || store.get(BRAND_KEY);
+    if (!id) return;
+    rememberBrand(id);
+    window.db.collection("branding").doc(id).get().then((d) => { if (d.exists) setBrand(d.data()); }).catch(() => {});
+  }, []);
+  return brand;
+}
+
+function Landing({ onPick }) {
+  const brand = useBranding();
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ background: C.bg }}>
+      <div className="w-full max-w-md text-center">
+        <TeamMark logo={brand && brand.logo} size={brand && brand.logo ? 176 : 120} />
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: C.ink }}>{(brand && brand.name) || "Team Treasury"}</h1>
+        <p className="text-sm mt-1" style={{ color: C.inkSoft }}>Player account balances, fees, and statements.</p>
+        <div className="mt-8 grid gap-3">
+          <button onClick={() => onPick("parent")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.pitchDark, color: "#fff" }}>
+            <span className="font-bold">👥 Parent portal</span><span>›</span>
+          </button>
+          <button onClick={() => onPick("staff")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.surface, color: C.ink, border: `1px solid ${C.line}` }}>
+            <span className="font-bold">🔒 Treasurer or coach</span><span>›</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SignInScreen({ mode, onBack }) {
+  const [email, setEmail] = useState(""); const [sent, setSent] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const staff = mode === "staff";
+  const google = async () => {
+    setErr("");
+    try { await window.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    catch (e) { console.error("Google sign-in failed:", e); if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") setErr(friendlyAuthError(e)); }
+  };
+  const sendLink = async (e) => {
+    if (e) e.preventDefault();
+    const em = lc(email);
+    if (!isEmail(em)) { setErr("Enter a valid email address."); return; }
+    setBusy(true); setErr("");
+    try {
+      // The email rides along in the link so parents never have to retype it, even when
+      // the link opens in a different browser (e.g. inside the Gmail app).
+      const brandId = store.get(BRAND_KEY);
+      const back = siteUrl() + "?em=" + encodeURIComponent(em) + (brandId ? "&team=" + encodeURIComponent(brandId) : "");
+      await window.auth.sendSignInLinkToEmail(em, { url: back, handleCodeInApp: true });
+      store.set(LINK_EMAIL_KEY, em); setSent(em);
+    } catch (e2) { console.error("Email link failed:", e2); setErr(friendlyAuthError(e2)); }
+    setBusy(false);
+  };
+  if (sent) return (
+    <Shell onBack={() => setSent("")}>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>📬 Check your email</h2>
+      <p className="text-sm mt-2" style={{ color: C.inkSoft }}>We sent a sign-in link to <b style={{ color: C.ink }}>{sent}</b>. Open it on this device to sign in. It can take a minute to arrive, so check spam too.</p>
+    </Shell>
+  );
+  const emailForm = (
+    <form className="grid gap-3" onSubmit={sendLink}>
+      <Field label="Email address">
+        <TextInput type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} placeholder="you@example.com" autoComplete="email" style={err ? { borderColor: C.debit } : undefined} />
+      </Field>
+      <Button type="submit" variant={staff ? "ghost" : "dark"} disabled={busy}>{busy ? <Spinner size={14} /> : "✉"} Email me a sign-in link</Button>
+    </form>
+  );
+  const googleBtn = <Button variant={staff ? "dark" : "ghost"} onClick={google}>Continue with Google</Button>;
+  return (
+    <Shell onBack={onBack}>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>{staff ? "🔒 Treasurer or coach" : "👥 Parent portal"}</h2>
+      <p className="text-sm mt-1 mb-4" style={{ color: C.inkSoft }}>
+        {staff ? "Sign in with the Google account (or email) your team has on file." : "Use the email address your team treasurer has on file for your player. No password needed."}
+      </p>
+      <div className="grid gap-3">
+        {staff ? googleBtn : emailForm}
+        <p className="text-xs text-center" style={{ color: C.inkSoft }}>or</p>
+        {staff ? emailForm : googleBtn}
+      </div>
+      {err && <p className="text-xs font-semibold mt-3" style={{ color: C.debit }}>⚠ {err}</p>}
+    </Shell>
+  );
+}
+
+function CreateTeam({ me, onCreated }) {
+  const [name, setName] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const create = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setBusy(true); setErr("");
+    try {
+      const ref = window.db.collection("teams").doc();
+      const batch = window.db.batch();
+      batch.set(ref, { name: name.trim(), ownerEmail: me, createdAt: Date.now(), parentMessage: "", venmoUsername: "", treasurerEmail: me, teamLogo: "", checkPayableTo: "", seasonCutoff: 0 });
+      batch.set(window.db.collection("staff").doc(ref.id + "__" + me), { teamId: ref.id, email: me, role: "owner", name: "" });
+      await batch.commit();
+      onCreated(ref.id);
+    } catch (e2) { console.error(e2); setErr("Couldn't create the team. Please try again."); }
+    setBusy(false);
+  };
+  return (
+    <Shell>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>Set up your team</h2>
+      <p className="text-sm mt-1 mb-4" style={{ color: C.inkSoft }}>You're signed in as <b style={{ color: C.ink }}>{me}</b>, but you aren't on a team yet. Create one to become its treasurer.</p>
+      <form className="grid gap-3" onSubmit={create}>
+        <Field label="Team name"><TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. U13 Boys" /></Field>
+        <Button type="submit" disabled={busy || !name.trim()}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Create team</Button>
+      </form>
+      {err && <p className="text-xs font-semibold mt-3" style={{ color: C.debit }}>⚠ {err}</p>}
+      <p className="text-xs mt-5" style={{ color: C.inkSoft }}>Coach or co-treasurer? Ask your treasurer to add <b>{me}</b> under Settings → Team access, then sign in again. <button onClick={signOut} className="font-semibold" style={{ color: C.pitchDark }}>Sign out</button></p>
+    </Shell>
+  );
+}
+
+function TeamPicker({ memberships, teams, onPick, onCreate }) {
+  return (
+    <Shell>
+      <h2 className="font-black text-lg mb-4" style={{ color: C.ink }}>Choose a team</h2>
+      <div className="grid gap-2">
+        {memberships.map((m) => (
+          <button key={m.teamId} onClick={() => onPick(m.teamId)} className="flex items-center justify-between rounded-xl p-3 text-left" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
+            <span className="font-bold">{(teams[m.teamId] && teams[m.teamId].name) || "Team"}</span><span className="text-xs" style={{ color: C.inkSoft }}>{m.role}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-between mt-5">
+        <button onClick={onCreate} className="text-xs font-semibold" style={{ color: C.pitchDark }}>+ Create another team</button>
+        <button onClick={signOut} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Sign out</button>
+      </div>
+    </Shell>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Staff app: one team, scoped to that team's records only
+---------------------------------------------------------------- */
+function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
+  const [team, setTeam] = useState(null);
+  const [rawPlayers, setRawPlayers] = useState(null);
+  const [notes, setNotes] = useState({});
+  const [allTxns, setAllTxns] = useState(null);
+  const [staff, setStaff] = useState([]);
+  const [loadErr, setLoadErr] = useState("");
+
+  useEffect(() => {
+    window.currentTeamId = teamId;
+    const db = window.db; const fail = (e) => { console.error(e); setLoadErr("Couldn't load this team's records. You may not have access."); };
+    const unsubs = [
+      db.collection("teams").doc(teamId).onSnapshot((d) => setTeam(d.exists ? d.data() : {}), fail),
+      db.collection("players").where("teamId", "==", teamId).onSnapshot((s) => setRawPlayers(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
+      db.collection("transactions").where("teamId", "==", teamId).onSnapshot((s) => setAllTxns(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
+      db.collection("staff").where("teamId", "==", teamId).onSnapshot((s) => setStaff(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
+      db.collection("playerNotes").where("teamId", "==", teamId).onSnapshot((s) => { const m = {}; s.docs.forEach((d) => { m[d.id] = d.data().notes || ""; }); setNotes(m); }, fail),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [teamId]);
+
+  // Public branding (name + logo only) so the sign-in screen can show the team's logo.
+  useEffect(() => {
+    if (!team || role === "coach") return;
+    rememberBrand(teamId);
+    window.db.collection("branding").doc(teamId).set({ teamId, name: team.name || "", logo: team.teamLogo || "" }).catch(console.error);
+  }, [team && team.name, team && team.teamLogo]);
+  useEffect(() => { rememberBrand(teamId); }, [teamId]);
+
+  const cutoff = (team && team.seasonCutoff) || 0;
+  const players = useMemo(() => (rawPlayers || []).map((p) => ({ ...p, notes: notes[p.id] || "" })).sort((a, b) => a.name.localeCompare(b.name)), [rawPlayers, notes]);
+  const inSeason = (t) => (Number(t.createdAt) || 0) >= cutoff;
+  const transactions = useMemo(() => (allTxns || []).filter((t) => !t.voidedAt && inSeason(t)), [allTxns, cutoff]);
+  const voided = useMemo(() => (allTxns || []).filter((t) => t.voidedAt && inSeason(t)).sort((a, b) => String(b.voidedAt).localeCompare(String(a.voidedAt))), [allTxns, cutoff]);
+
+  const db = window.db;
+  const playersCol = db.collection("players"), notesCol = db.collection("playerNotes"), txnCol = db.collection("transactions"), teamRef = db.collection("teams").doc(teamId);
+  const setTeamField = (field) => async (v) => { await teamRef.update({ [field]: v }); };
+
+  const addPlayer = async (p) => { await addPlayersBulk([p]); };
+  const addPlayersBulk = async (list) => {
+    const writes = [];
+    list.forEach((p) => {
+      const { notes: n, accessCode, ...rest } = p;
+      const ref = playersCol.doc();
+      writes.push((b) => b.set(ref, { ...rest, teamId, guardianEmails: guardianEmailsOf(rest) }));
+      if (n) writes.push((b) => b.set(notesCol.doc(ref.id), { teamId, notes: n }));
+    });
+    await commitWrites(writes);
+  };
+  const updatePlayer = async (id, patch) => {
+    const { notes: n, accessCode, ...rest } = patch;
+    const cur = (rawPlayers || []).find((p) => p.id === id) || {};
+    const upd = { ...rest };
+    if ("parentEmail" in rest || "parentEmail2" in rest) upd.guardianEmails = guardianEmailsOf({ ...cur, ...rest });
+    if (Object.keys(upd).length) await playersCol.doc(id).update(upd);
+    if (n !== undefined && n !== (notes[id] || "")) await notesCol.doc(id).set({ teamId, notes: n });
+  };
+  const deletePlayer = async (id) => {
+    if ((allTxns || []).some((t) => t.playerId === id)) {
+      alert("This player has transaction history, so they can't be deleted. Use Deactivate instead. It hides them from active lists and keeps their records.");
+      return;
+    }
+    await playersCol.doc(id).delete();
+    if (notes[id] !== undefined) await notesCol.doc(id).delete();
+  };
+  const stamp = (t) => ({ ...t, teamId, createdBy: me, createdAt: Number(t.createdAt) || Date.now() });
+  const addTxn = async (t) => { await txnCol.add(stamp(t)); };
+  const addBulkTxn = async (playerIds, base) => {
+    const now = Date.now();
+    await commitWrites(playerIds.map((pid) => (b) => b.set(txnCol.doc(), stamp({ createdAt: now, ...base, playerId: pid }))));
+  };
+  // "Delete" = void with a reason. The record stays, marked void, and stops counting toward balances.
+  const deleteTxn = async (id, reason) => {
+    await txnCol.doc(id).update({ voidedAt: new Date().toISOString(), voidedBy: me, voidReason: reason || "Voided" });
+  };
+  // "Edit" = void the original and add a corrected copy, so the history shows both.
+  const updateTxn = async (id, patch) => {
+    const old = (allTxns || []).find((t) => t.id === id);
+    if (!old) return;
+    const { id: _i, voidedAt, voidedBy, voidReason, createdBy, ...base } = old;
+    const next = { ...base, ...patch, replaces: id, editedAt: Date.now() };
+    if (next.breakdown === null) delete next.breakdown;
+    const ref = txnCol.doc();
+    const batch = db.batch();
+    batch.set(ref, stamp(next));
+    batch.update(txnCol.doc(id), { voidedAt: new Date().toISOString(), voidedBy: me, voidReason: "Edited (replaced by a corrected entry)" });
+    await batch.commit();
+  };
+  const archiveSeason = async (label, carryForward) => {
+    const balanceOf = (playerId) => {
+      const p = players.find((pl) => pl.id === playerId);
+      let bal = Number(p && p.openingBalance) || 0;
+      for (const t of transactions) { if (t.playerId === playerId) bal += t.direction === "credit" ? t.amount : -t.amount; }
+      return Math.round(bal * 100) / 100;
+    };
+    await db.collection("archives").add({
+      teamId, label: label.trim() || `Season archived ${todayStr()}`, archivedAt: new Date().toISOString(),
+      teamName: team.name || "", players: players.map((p) => ({ ...p })), transactions: transactions.map((t) => ({ ...t })), voided: voided.map((t) => ({ ...t })),
+    });
+    const writes = players.map((p) => (b) => b.update(playersCol.doc(p.id), { openingBalance: carryForward ? balanceOf(p.id) : 0 }));
+    writes.push((b) => b.update(teamRef, { seasonCutoff: Date.now() }));
+    await commitWrites(writes);
+  };
+  // One-time import of a backup file from the old single-team app (or this one).
+  const importBackup = async (backup) => {
+    if ((rawPlayers || []).length || (allTxns || []).length) throw new Error("Import only works on a team with no players or transactions yet.");
+    const idMap = {}; const writes = [];
+    backup.players.forEach((p) => {
+      const { id, accessCode, notes: n, guardianEmails, teamId: _t, ...rest } = p;
+      const ref = playersCol.doc(); idMap[id] = ref.id;
+      writes.push((b) => b.set(ref, { ...rest, active: rest.active !== false, openingBalance: Number(rest.openingBalance) || 0, teamId, guardianEmails: guardianEmailsOf(rest) }));
+      if (n) writes.push((b) => b.set(notesCol.doc(ref.id), { teamId, notes: n }));
+    });
+    let skipped = 0;
+    backup.transactions.forEach((t) => {
+      const { id, teamId: _t, createdBy, voidedAt, voidedBy, voidReason, ...rest } = t;
+      if (voidedAt || !idMap[t.playerId] || !(Number(rest.amount) > 0)) { skipped++; return; }
+      writes.push((b) => b.set(txnCol.doc(), stamp({ ...rest, amount: Number(rest.amount), playerId: idMap[t.playerId], importedFrom: id })));
+    });
+    await commitWrites(writes);
+    return { players: backup.players.length, transactions: backup.transactions.length - skipped, skipped };
+  };
+  const addStaff = async (email, role2) => {
+    const em = lc(email);
+    await db.collection("staff").doc(teamId + "__" + em).set({ teamId, email: em, role: role2, name: "" });
+  };
+  const removeStaff = async (email) => { await db.collection("staff").doc(teamId + "__" + lc(email)).delete(); };
+
+  if (loadErr) return <Shell><p className="text-sm" style={{ color: C.debit }}>⚠ {loadErr}</p><button onClick={signOut} className="text-sm font-semibold mt-4" style={{ color: C.pitchDark }}>Sign out</button></Shell>;
+  if (!team || !rawPlayers || !allTxns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
+
+  const teamName = team.name || "Team Treasury";
+  const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "" };
+  if (role === "coach") return <TeamCtx.Provider value={ctx}><CoachView teamName={teamName} players={players} transactions={transactions} onLogout={signOut} /></TeamCtx.Provider>;
+  return (
+    <TeamCtx.Provider value={ctx}>
+      <AdminShell teamName={teamName} setTeamName={setTeamField("name")} parentMessage={team.parentMessage || ""} setParentMessage={setTeamField("parentMessage")}
+        venmoUsername={team.venmoUsername || ""} setVenmoUsername={setTeamField("venmoUsername")} treasurerEmail={team.treasurerEmail || ""} setTreasurerEmail={setTeamField("treasurerEmail")}
+        teamLogo={team.teamLogo || ""} setTeamLogo={setTeamField("teamLogo")}
+        players={players} transactions={transactions} addPlayer={addPlayer} addPlayersBulk={addPlayersBulk} updatePlayer={updatePlayer} deletePlayer={deletePlayer}
+        addTxn={addTxn} addBulkTxn={addBulkTxn} deleteTxn={deleteTxn} updateTxn={updateTxn}
+        onLock={signOut} onRestoreBackup={importBackup} onArchiveSeason={archiveSeason} />
+    </TeamCtx.Provider>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Parent app: only the signed-in parent's own player(s)
+---------------------------------------------------------------- */
+function ParentApp({ me, kids }) {
+  const [pickedId, setPickedId] = useState(kids.length === 1 ? kids[0].id : null);
+  const kid = kids.find((k) => k.id === pickedId) || null;
+  const [team, setTeam] = useState(null);
+  const [txns, setTxns] = useState(null);
+  useEffect(() => {
+    if (!kid) return;
+    rememberBrand(kid.teamId);
+    setTeam(null); setTxns(null);
+    const u1 = window.db.collection("teams").doc(kid.teamId).onSnapshot((d) => setTeam(d.exists ? d.data() : {}), console.error);
+    const u2 = window.db.collection("transactions").where("teamId", "==", kid.teamId).where("playerId", "==", kid.id)
+      .onSnapshot((s) => setTxns(s.docs.map((d) => ({ id: d.id, ...d.data() }))), console.error);
+    return () => { u1(); u2(); };
+  }, [kid && kid.id]);
+
+  if (!kids.length) return (
+    <Shell>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>No players found</h2>
+      <p className="text-sm mt-2" style={{ color: C.inkSoft }}>There's no player on file with the parent email <b style={{ color: C.ink }}>{me}</b>. Ask your team treasurer to check which email they have for you, then sign in with that one.</p>
+      <Button variant="ghost" className="mt-4" onClick={signOut}>Sign out</Button>
+    </Shell>
+  );
+  if (!kid) return (
+    <Shell>
+      <h2 className="font-black text-lg mb-4" style={{ color: C.ink }}>Choose a player</h2>
+      <div className="grid gap-2">
+        {kids.map((k) => (
+          <button key={k.id} onClick={() => setPickedId(k.id)} className="flex items-center justify-between rounded-xl p-3 text-left font-bold" style={{ border: `1px solid ${C.line}`, color: C.ink }}>{k.name}<span>›</span></button>
+        ))}
+      </div>
+      <button onClick={signOut} className="text-xs font-semibold mt-5" style={{ color: C.inkSoft }}>Sign out</button>
+    </Shell>
+  );
+  if (!team || !txns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
+  const cutoff = team.seasonCutoff || 0;
+  const visible = txns.filter((t) => !t.voidedAt && (Number(t.createdAt) || 0) >= cutoff);
+  return (
+    <TeamCtx.Provider value={{ checkPayableTo: team.checkPayableTo || "", teamLogo: team.teamLogo || "" }}>
+      <ParentView teamName={team.name || "Team Treasury"} parentMessage={team.parentMessage || ""} venmoUsername={team.venmoUsername || ""} treasurerEmail={team.treasurerEmail || ""}
+        players={[kid]} transactions={visible} playerId={kid.id} onLogout={signOut} onSwitch={kids.length > 1 ? () => setPickedId(null) : null} />
+    </TeamCtx.Provider>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Root app
+---------------------------------------------------------------- */
+function App() {
+  const [user, setUser] = useState(undefined);
+  const [linkErr, setLinkErr] = useState("");
+  const [picked, setPicked] = useState(null); // landing choice before sign-in
+  const [memberships, setMemberships] = useState(null);
+  const [teams, setTeams] = useState({});
+  const [kids, setKids] = useState(null);
+  const [teamId, setTeamId] = useState(store.get(TEAM_KEY));
+  const [creating, setCreating] = useState(false);
+
+  // Finish an emailed sign-in link if this page was opened from one.
+  useEffect(() => {
+    const auth = window.auth;
+    if (!auth.isSignInWithEmailLink(window.location.href)) return;
+    // Firebase puts our return address (with ?em=) inside the link's continueUrl.
+    let fromLink = urlParam("em");
+    try { const cu = urlParam("continueUrl"); if (!fromLink && cu) fromLink = new URL(cu).searchParams.get("em"); } catch (e) {}
+    let em = fromLink || store.get(LINK_EMAIL_KEY);
+    if (!em) em = window.prompt("To finish signing in, confirm the email address the link was sent to:");
+    const clean = () => window.history.replaceState(null, "", siteUrl());
+    if (!em) { clean(); return; }
+    auth.signInWithEmailLink(lc(em), window.location.href)
+      .then(() => { store.del(LINK_EMAIL_KEY); clean(); })
+      .catch((e) => { setLinkErr(friendlyAuthError(e)); clean(); });
+  }, []);
+
+  useEffect(() => window.auth.onAuthStateChanged((u) => { setUser(u || null); setMemberships(null); setKids(null); setTeams({}); if (!u) { setPicked(null); setCreating(false); } }), []);
+
+  const me = user && user.email ? lc(user.email) : "";
+  useEffect(() => {
+    if (!me) return;
+    const db = window.db;
+    // Only count memberships the server has confirmed. A just-created team shows up locally a
+    // moment before it's saved, and the security rules (rightly) refuse to load it until then.
+    const u1 = db.collection("staff").where("email", "==", me).onSnapshot({ includeMetadataChanges: true }, (s) => setMemberships(s.docs.filter((d) => !(d.metadata && d.metadata.hasPendingWrites)).map((d) => d.data())), (e) => { console.error(e); setMemberships([]); });
+    const u2 = db.collection("players").where("guardianEmails", "array-contains", me).onSnapshot((s) => setKids(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name))), (e) => { console.error(e); setKids([]); });
+    return () => { u1(); u2(); };
+  }, [me]);
+  useEffect(() => {
+    (memberships || []).forEach((m) => {
+      if (teams[m.teamId]) return;
+      window.db.collection("teams").doc(m.teamId).get().then((d) => setTeams((t) => ({ ...t, [m.teamId]: d.data() || {} })));
+    });
+  }, [memberships]);
+
+  const pickTeam = (id) => { store.set(TEAM_KEY, id); setTeamId(id); setCreating(false); };
+  const spinner = <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
+
+  if (user === undefined) return spinner;
+  if (!user) {
+    if (linkErr) return <Shell onBack={() => setLinkErr("")}><p className="text-sm" style={{ color: C.debit }}>⚠ {linkErr}</p></Shell>;
+    if (!picked) return <Landing onPick={(m) => { store.set(MODE_KEY, m); setPicked(m); }} />;
+    return <SignInScreen mode={picked} onBack={() => setPicked(null)} />;
+  }
+  if (!user.email || !user.emailVerified) return (
+    <Shell><p className="text-sm" style={{ color: C.ink }}>This account doesn't have a verified email address, so it can't be used here.</p><Button variant="ghost" className="mt-4" onClick={signOut}>Sign out</Button></Shell>
+  );
+  if (memberships === null || kids === null) return spinner;
+
+  const mode = store.get(MODE_KEY) || (memberships.length ? "staff" : "parent");
+  if (mode === "parent") return <ParentApp me={me} kids={kids} />;
+
+  if (creating || memberships.length === 0) return <CreateTeam me={me} onCreated={pickTeam} />;
+  const current = memberships.find((m) => m.teamId === teamId) || (memberships.length === 1 ? memberships[0] : null);
+  if (!current) return <TeamPicker memberships={memberships} teams={teams} onPick={pickTeam} onCreate={() => setCreating(true)} />;
+  return <StaffApp key={current.teamId} teamId={current.teamId} role={current.role} me={me} canSwitch={memberships.length > 1} onSwitchTeam={() => { store.del(TEAM_KEY); setTeamId(null); }} />;
+}
+
+/* ---------------------------------------------------------------
+   Settings: who can access this team
+---------------------------------------------------------------- */
+function TeamAccessPanel() {
+  const { staff = [], role, me, addStaff, removeStaff } = useContext(TeamCtx);
+  const [email, setEmail] = useState(""); const [newRole, setNewRole] = useState("coach"); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const isOwner = role === "owner";
+  const add = async (e) => {
+    e.preventDefault();
+    if (!isEmail(email)) { setErr("Enter a valid email address."); return; }
+    if (staff.some((s) => s.email === lc(email))) { setErr("That person already has access."); return; }
+    setBusy(true); setErr("");
+    try { await addStaff(email, newRole); setEmail(""); } catch (e2) { setErr("Couldn't add them. Only the team owner can change access."); }
+    setBusy(false);
+  };
+  const roleLabel = { owner: "Owner", treasurer: "Treasurer", coach: "Coach (view only)" };
+  return (
+    <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+      <p className="font-black mb-2" style={{ color: C.ink }}>Team access</p>
+      <p className="text-sm mb-3" style={{ color: C.inkSoft }}>People who can sign in to this team's records. Coaches can see player balances but can't change anything. Treasurers can do everything except manage this list. Parents don't go here. They get in with the email on their player's record.</p>
+      <div className="grid gap-2 mb-4">
+        {[...staff].sort((a, b) => a.email.localeCompare(b.email)).map((s) => (
+          <div key={s.id} className="flex items-center justify-between gap-2 text-sm" style={{ color: C.ink }}>
+            <span className="truncate">{s.email}{s.email === me ? " (you)" : ""}</span>
+            <span className="flex items-center gap-3" style={{ flexShrink: 0 }}>
+              <span className="text-xs" style={{ color: C.inkSoft }}>{roleLabel[s.role] || s.role}</span>
+              {isOwner && s.role !== "owner" && <button onClick={() => { if (confirm(`Remove ${s.email}'s access?`)) removeStaff(s.email); }} className="text-xs font-semibold" style={{ color: C.debit }}>Remove</button>}
+            </span>
+          </div>
+        ))}
+      </div>
+      {isOwner ? (
+        <form className="grid gap-2" onSubmit={add}>
+          <div className="flex gap-2 flex-wrap">
+            <TextInput type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} placeholder="coach@example.com" style={{ flex: "1 1 180px" }} />
+            <Select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ width: "auto" }}><option value="coach">Coach</option><option value="treasurer">Treasurer</option></Select>
+            <Button type="submit" disabled={busy}>Add</Button>
+          </div>
+          {err && <p className="text-xs font-semibold" style={{ color: C.debit }}>⚠ {err}</p>}
+          <p className="text-xs" style={{ color: C.inkSoft }}>They sign in at this site with Google (or an emailed link) using exactly this email.</p>
+        </form>
+      ) : <p className="text-xs" style={{ color: C.inkSoft }}>Only the team owner can change who has access.</p>}
+    </div>
+  );
+}
+
+/* Voided entries: kept for the record, excluded from balances */
+function VoidedList({ playerName }) {
+  const { voided = [] } = useContext(TeamCtx);
+  const [open, setOpen] = useState(false);
+  if (!voided.length) return null;
+  return (
+    <div className="mt-4">
+      <button onClick={() => setOpen((o) => !o)} className="text-xs font-semibold" style={{ color: C.inkSoft }}>{open ? "▾" : "▸"} Voided entries ({voided.length})</button>
+      {open && (
+        <div className="rounded-2xl overflow-hidden mt-2" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Date</th><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Category</th><th className="font-semibold px-4 py-3 text-right">Amount</th><th className="font-semibold px-4 py-3">Voided</th></tr></thead>
+            <tbody>{voided.map((t) => (
+              <tr key={t.id} className="border-t" style={{ borderColor: C.lineSoft, color: C.inkSoft }}>
+                <td className="px-4 py-3" style={{ textDecoration: "line-through" }}>{t.date}</td>
+                <td className="px-4 py-3" style={{ textDecoration: "line-through" }}>{playerName(t.playerId)}</td>
+                <td className="px-4 py-3" style={{ textDecoration: "line-through" }}>{t.category}</td>
+                <td className="px-4 py-3 text-right" style={{ textDecoration: "line-through", fontVariantNumeric: "tabular-nums" }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</td>
+                <td className="px-4 py-3 text-xs">{String(t.voidedAt).slice(0, 10)} · {t.voidedBy}<div>{t.voidReason}</div></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HeaderLogo() {
+  const { teamLogo } = useContext(TeamCtx);
+  return teamLogo
+    ? <img src={teamLogo} alt="" style={{ width: 30, height: 30, objectFit: "contain", flexShrink: 0, borderRadius: 6 }} />
+    : <span className="rounded-lg flex items-center justify-center text-white" style={{ width: 30, height: 30, flexShrink: 0, background: C.pitch }}>⚽</span>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
