@@ -111,6 +111,8 @@
   appId: "1:880693217551:web:fa69446eeaff995ae9167a",
   measurementId: "G-8NLTZXRSB4"
   };
+  // Sign in with Apple: set to true only after finishing the Apple setup in the README.
+  window.ENABLE_APPLE_SIGNIN = false;
   firebase.initializeApp(firebaseConfig);
   window.db = firebase.firestore();
   window.auth = firebase.auth();
@@ -885,10 +887,11 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
           <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
             <button onClick={() => setMode("single")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "single" ? C.pitchTint : "transparent", color: mode === "single" ? C.pitchDark : C.inkSoft }}>Single</button>
             <button onClick={() => setMode("bulk")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "bulk" ? C.pitchTint : "transparent", color: mode === "bulk" ? C.pitchDark : C.inkSoft }}>Bulk</button>
+            <button onClick={() => setMode("family")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "family" ? C.pitchTint : "transparent", color: mode === "family" ? C.pitchDark : C.inkSoft }}>Family payment</button>
           </div>
         </div>
 
-        {players.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Add a player first on the Roster tab.</p> : mode === "single" ? (<>
+        {players.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Add a player first on the Roster tab.</p> : mode === "family" ? <FamilyPaymentForm players={players} transactions={transactions} /> : mode === "single" ? (<>
           <div className="grid sm:grid-cols-3 gap-3">
             <Field label="Player"><Select value={form.playerId} onChange={(e) => setForm({ ...form, playerId: e.target.value })}>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
             <Field label="Date"><TextInput type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
@@ -1483,7 +1486,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
   const stats = view === "season" ? ledger.seasonStats(playerId) : ledger.monthStats(playerId, month);
   const balance = ledger.currentBalance(playerId);
   const label = balance < -0.004 ? "Amount due" : balance > 0.004 ? "Credit balance" : "Paid in full";
-  const venmoLink = venmoUsername ? `https://venmo.com/${venmoUsername}?txn=pay&note=${encodeURIComponent(`${player.name} (${teamName})`)}` : null;
+  const venmoLink = venmoUsername ? `https://venmo.com/${venmoUsername}?txn=pay${balance < -0.004 ? `&amount=${Math.abs(balance).toFixed(2)}` : ""}&note=${encodeURIComponent(`${player.name} (${teamName})`)}` : null;
   const treasurerMailto = treasurerEmail
     ? `mailto:${treasurerEmail}?subject=${encodeURIComponent(`${teamName} — Question about ${player.name}'s account`)}`
     : null;
@@ -1491,7 +1494,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
-        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Switch player</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft }}>Sign out</button></div>
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ color: C.pitchDark }}>← All players</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft }}>Sign out</button></div>
       </header>
       <main className="p-5 max-w-2xl mx-auto">
         {parentMessage && parentMessage.trim() && (
@@ -1647,10 +1650,16 @@ function Landing({ onPick }) {
 function SignInScreen({ mode, onBack }) {
   const [email, setEmail] = useState(""); const [sent, setSent] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const staff = mode === "staff";
-  const google = async () => {
+  const popup = async (provider, label) => {
     setErr("");
-    try { await window.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    catch (e) { console.error("Google sign-in failed:", e); if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") setErr(friendlyAuthError(e)); }
+    try { await window.auth.signInWithPopup(provider); }
+    catch (e) { console.error(label + " sign-in failed:", e); if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") setErr(friendlyAuthError(e)); }
+  };
+  const google = () => popup(new firebase.auth.GoogleAuthProvider(), "Google");
+  const apple = () => {
+    const p = new firebase.auth.OAuthProvider("apple.com");
+    p.addScope("email"); p.addScope("name");
+    return popup(p, "Apple");
   };
   const sendLink = async (e) => {
     if (e) e.preventDefault();
@@ -1681,7 +1690,13 @@ function SignInScreen({ mode, onBack }) {
       <Button type="submit" variant={staff ? "ghost" : "dark"} disabled={busy}>{busy ? <Spinner size={14} /> : "✉"} Email me a sign-in link</Button>
     </form>
   );
-  const googleBtn = <Button variant={staff ? "dark" : "ghost"} onClick={google}>Continue with Google</Button>;
+  const googleBtn = (
+    <div className="grid gap-2">
+      <Button variant={staff ? "dark" : "ghost"} onClick={google}>Continue with Google</Button>
+      {window.ENABLE_APPLE_SIGNIN && <Button variant={staff ? "dark" : "ghost"} onClick={apple}> Continue with Apple</Button>}
+      {window.ENABLE_APPLE_SIGNIN && !staff && <p className="text-xs" style={{ color: C.inkSoft }}>Using Apple? When asked, choose <b>Share My Email</b> so we can match you to your player.</p>}
+    </div>
+  );
   return (
     <Shell onBack={onBack}>
       <h2 className="font-black text-lg" style={{ color: C.ink }}>{staff ? "🔒 Treasurer or coach" : "👥 Parent portal"}</h2>
@@ -1873,6 +1888,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
     await commitWrites(writes);
     return { players: backup.players.length, transactions: backup.transactions.length - skipped, skipped };
   };
+  const addTxns = async (list) => { const now = Date.now(); await commitWrites(list.map((t) => (b) => b.set(txnCol.doc(), stamp({ createdAt: now, ...t })))); };
   const addStaff = async (email, role2) => {
     const em = lc(email);
     await db.collection("staff").doc(teamId + "__" + em).set({ teamId, email: em, role: role2, name: "" });
@@ -1883,7 +1899,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   if (!team || !rawPlayers || !allTxns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
 
   const teamName = team.name || "Team Treasury";
-  const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "" };
+  const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "", addTxns };
   if (role === "coach") return <TeamCtx.Provider value={ctx}><CoachView teamName={teamName} players={players} transactions={transactions} onLogout={signOut} /></TeamCtx.Provider>;
   return (
     <TeamCtx.Provider value={ctx}>
@@ -1902,44 +1918,101 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
 ---------------------------------------------------------------- */
 function ParentApp({ me, kids }) {
   const [pickedId, setPickedId] = useState(kids.length === 1 ? kids[0].id : null);
-  const kid = kids.find((k) => k.id === pickedId) || null;
-  const [team, setTeam] = useState(null);
-  const [txns, setTxns] = useState(null);
+  const [teams, setTeams] = useState({});   // teamId -> team doc
+  const [txnsBy, setTxnsBy] = useState({}); // playerId -> transactions
+  const kidKey = kids.map((k) => k.id + ":" + k.teamId).join(",");
   useEffect(() => {
-    if (!kid) return;
-    rememberBrand(kid.teamId);
-    setTeam(null); setTxns(null);
-    const u1 = window.db.collection("teams").doc(kid.teamId).onSnapshot((d) => setTeam(d.exists ? d.data() : {}), console.error);
-    const u2 = window.db.collection("transactions").where("teamId", "==", kid.teamId).where("playerId", "==", kid.id)
-      .onSnapshot((s) => setTxns(s.docs.map((d) => ({ id: d.id, ...d.data() }))), console.error);
-    return () => { u1(); u2(); };
-  }, [kid && kid.id]);
+    const unsubs = [];
+    [...new Set(kids.map((k) => k.teamId))].forEach((tid) => {
+      unsubs.push(window.db.collection("teams").doc(tid).onSnapshot((d) => setTeams((t) => ({ ...t, [tid]: d.exists ? d.data() : {} })), console.error));
+    });
+    kids.forEach((k) => {
+      unsubs.push(window.db.collection("transactions").where("teamId", "==", k.teamId).where("playerId", "==", k.id)
+        .onSnapshot((s) => setTxnsBy((m) => ({ ...m, [k.id]: s.docs.map((d) => ({ id: d.id, ...d.data() })) })), console.error));
+    });
+    if (kids.length) rememberBrand(kids[0].teamId);
+    return () => unsubs.forEach((u) => u());
+  }, [kidKey]);
 
   if (!kids.length) return (
     <Shell>
       <h2 className="font-black text-lg" style={{ color: C.ink }}>No players found</h2>
       <p className="text-sm mt-2" style={{ color: C.inkSoft }}>There's no player on file with the parent email <b style={{ color: C.ink }}>{me}</b>. Ask your team treasurer to check which email they have for you, then sign in with that one.</p>
+      {me.endsWith("@privaterelay.appleid.com") && (
+        <p className="text-sm mt-3" style={{ color: C.ink }}>It looks like you chose <b>Hide My Email</b> with Apple, so we can't see your real address. Sign out and use <b>Email me a sign-in link</b> instead, or ask your treasurer to add <b>{me}</b> as your email on file.</p>
+      )}
       <Button variant="ghost" className="mt-4" onClick={signOut}>Sign out</Button>
     </Shell>
   );
-  if (!kid) return (
-    <Shell>
-      <h2 className="font-black text-lg mb-4" style={{ color: C.ink }}>Choose a player</h2>
-      <div className="grid gap-2">
-        {kids.map((k) => (
-          <button key={k.id} onClick={() => setPickedId(k.id)} className="flex items-center justify-between rounded-xl p-3 text-left font-bold" style={{ border: `1px solid ${C.line}`, color: C.ink }}>{k.name}<span>›</span></button>
-        ))}
-      </div>
-      <button onClick={signOut} className="text-xs font-semibold mt-5" style={{ color: C.inkSoft }}>Sign out</button>
-    </Shell>
-  );
-  if (!team || !txns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
-  const cutoff = team.seasonCutoff || 0;
-  const visible = txns.filter((t) => !t.voidedAt && (Number(t.createdAt) || 0) >= cutoff);
+  const loaded = kids.every((k) => teams[k.teamId] && txnsBy[k.id]);
+  if (!loaded) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
+
+  const visibleFor = (k) => { const cutoff = teams[k.teamId].seasonCutoff || 0; return txnsBy[k.id].filter((t) => !t.voidedAt && (Number(t.createdAt) || 0) >= cutoff); };
+  const balanceOf = (k) => Math.round(buildLedger([k], visibleFor(k)).currentBalance(k.id) * 100) / 100;
+
+  const kid = kids.find((k) => k.id === pickedId);
+  if (kid) {
+    const team = teams[kid.teamId];
+    return (
+      <TeamCtx.Provider value={{ checkPayableTo: team.checkPayableTo || "", teamLogo: team.teamLogo || "" }}>
+        <ParentView teamName={team.name || "Team Treasury"} parentMessage={team.parentMessage || ""} venmoUsername={team.venmoUsername || ""} treasurerEmail={team.treasurerEmail || ""}
+          players={[kid]} transactions={visibleFor(kid)} playerId={kid.id} onLogout={signOut} onSwitch={kids.length > 1 ? () => setPickedId(null) : null} />
+      </TeamCtx.Provider>
+    );
+  }
+
+  // Family overview: every player, the family total, and one payment per team.
+  const total = kids.reduce((s, k) => s + balanceOf(k), 0);
+  const totalLabel = total < -0.004 ? "Family amount due" : total > 0.004 ? "Family credit balance" : "Paid in full";
+  const byTeam = {};
+  kids.forEach((k) => { (byTeam[k.teamId] = byTeam[k.teamId] || []).push(k); });
+  const payments = Object.entries(byTeam).map(([tid, ks]) => {
+    const team = teams[tid];
+    const due = Math.round(ks.reduce((s, k) => s + Math.max(0, -balanceOf(k)), 0) * 100) / 100;
+    const names = ks.filter((k) => balanceOf(k) < -0.004).map((k) => k.name).join(", ");
+    const note = `Family payment: ${names} (${team.name || "team"})`;
+    const link = team.venmoUsername && due > 0 ? `https://venmo.com/${team.venmoUsername}?txn=pay&amount=${due.toFixed(2)}&note=${encodeURIComponent(note)}` : null;
+    return { tid, team, due, names, link };
+  }).filter((x) => x.due > 0);
+  const multiTeam = Object.keys(byTeam).length > 1;
+  const firstTeam = teams[kids[0].teamId];
   return (
-    <TeamCtx.Provider value={{ checkPayableTo: team.checkPayableTo || "", teamLogo: team.teamLogo || "" }}>
-      <ParentView teamName={team.name || "Team Treasury"} parentMessage={team.parentMessage || ""} venmoUsername={team.venmoUsername || ""} treasurerEmail={team.treasurerEmail || ""}
-        players={[kid]} transactions={visible} playerId={kid.id} onLogout={signOut} onSwitch={kids.length > 1 ? () => setPickedId(null) : null} />
+    <TeamCtx.Provider value={{ teamLogo: multiTeam ? "" : (firstTeam.teamLogo || "") }}>
+      <div style={{ background: C.bg, minHeight: "100vh" }}>
+        <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
+          <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{multiTeam ? "Your family" : (firstTeam.name || "Team Treasury")}</p></div>
+          <button onClick={signOut} className="text-sm font-semibold" style={{ color: C.inkSoft, flexShrink: 0 }}>Sign out</button>
+        </header>
+        <main className="p-5 max-w-2xl mx-auto">
+          <div className="rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style={{ background: C.navy, color: "#fff" }}>
+            <div><p className="font-black text-lg">{kids.length} players</p><p className="text-xs opacity-80">{totalLabel}</p></div>
+            <span className="text-2xl font-black" style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(Math.abs(total))}</span>
+          </div>
+          {payments.length > 0 && (
+            <div className="grid gap-2 mb-5">
+              {payments.map((pmt) => pmt.link ? (
+                <a key={pmt.tid} href={pmt.link} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold" style={{ background: "#3D95CE", color: "#fff", textDecoration: "none" }}>
+                  <span>💳 Pay {fmtMoney(pmt.due)} via Venmo{multiTeam ? ` · ${pmt.team.name || "team"}` : ""}</span><span>↗</span>
+                </a>
+              ) : null)}
+              <p className="text-xs" style={{ color: C.inkSoft }}>One payment covers {payments.length > 1 ? "each team's" : "the"} amount due for all your players{multiTeam ? " on that team" : ""}. The Venmo note lists who it's for.</p>
+            </div>
+          )}
+          <p className="font-black mb-2" style={{ color: C.ink }}>Players</p>
+          <div className="grid gap-2">
+            {kids.map((k) => {
+              const bal = balanceOf(k);
+              return (
+                <button key={k.id} onClick={() => setPickedId(k.id)} className="flex items-center justify-between rounded-xl p-4 text-left" style={{ background: C.surface, border: `1px solid ${C.line}`, color: C.ink }}>
+                  <span><span className="font-bold block">{k.name}</span>{multiTeam && <span className="text-xs" style={{ color: C.inkSoft }}>{teams[k.teamId].name}</span>}</span>
+                  <span className="flex items-center gap-3"><MoneyText value={bal} /><span style={{ color: C.inkSoft }}>›</span></span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs mt-3" style={{ color: C.inkSoft }}>Tap a player for their statements.</p>
+        </main>
+      </div>
     </TeamCtx.Provider>
   );
 }
@@ -2096,6 +2169,95 @@ function HeaderLogo() {
   return teamLogo
     ? <img src={teamLogo} alt="" style={{ width: 30, height: 30, objectFit: "contain", flexShrink: 0, borderRadius: 6 }} />
     : <span className="rounded-lg flex items-center justify-center text-white" style={{ width: 30, height: 30, flexShrink: 0, background: C.pitch }}>⚽</span>;
+}
+
+/* ---------------------------------------------------------------
+   Treasurer: record one family payment across siblings
+---------------------------------------------------------------- */
+function familiesOf(players) {
+  const groups = {};
+  players.forEach((p) => guardianEmailsOf(p).forEach((e) => { (groups[e] = groups[e] || []).push(p); }));
+  const seen = new Set(); const out = [];
+  Object.entries(groups).forEach(([email, ps]) => {
+    if (ps.length < 2) return;
+    const key = ps.map((p) => p.id).sort().join(",");
+    if (seen.has(key)) return; seen.add(key);
+    const parent = ps.map((p) => (lc(p.parentEmail) === email ? p.parentName : lc(p.parentEmail2) === email ? p.parentName2 : "")).find(Boolean) || email;
+    out.push({ key, email, parent, players: ps });
+  });
+  return out.sort((a, b) => a.parent.localeCompare(b.parent));
+}
+
+function FamilyPaymentForm({ players, transactions }) {
+  const { addTxns } = useContext(TeamCtx);
+  const families = useMemo(() => familiesOf(players), [players]);
+  const ledger = useMemo(() => buildLedger(players, transactions), [players, transactions]);
+  const [famKey, setFamKey] = useState("");
+  const [total, setTotal] = useState(""); const [date, setDate] = useState(todayStr());
+  const [category, setCategory] = useState(CREDIT_CATEGORIES[0]); const [description, setDescription] = useState("");
+  const [split, setSplit] = useState({}); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
+  const fam = families.find((f) => f.key === famKey);
+  const owed = (id) => Math.max(0, Math.round(-ledger.currentBalance(id) * 100) / 100);
+
+  // Default split: pay off what each player owes, then put anything extra on the first player as credit.
+  const autoSplit = (amount, f = fam) => {
+    if (!f) return;
+    let left = Math.round((parseFloat(amount) || 0) * 100);
+    const next = {};
+    f.players.forEach((p) => { const c = Math.min(left, Math.round(owed(p.id) * 100)); next[p.id] = c; left -= c; });
+    if (left > 0) next[f.players[0].id] += left;
+    setSplit(Object.fromEntries(Object.entries(next).map(([k, c]) => [k, (c / 100).toFixed(2)])));
+  };
+  const totalCents = Math.round((parseFloat(total) || 0) * 100);
+  const splitCents = fam ? fam.players.reduce((s, p) => s + Math.round((parseFloat(split[p.id]) || 0) * 100), 0) : 0;
+  const valid = fam && totalCents > 0 && splitCents === totalCents;
+
+  const submit = async () => {
+    if (!valid) return;
+    setBusy(true); setMsg("");
+    const groupId = "fam_" + Date.now().toString(36);
+    const note = description.trim() || `Family payment (${fmtMoney(totalCents / 100)} total for ${fam.players.map((p) => p.name.split(" ")[0]).join(" & ")})`;
+    try {
+      await addTxns(fam.players.filter((p) => (parseFloat(split[p.id]) || 0) > 0).map((p) => ({
+        playerId: p.id, date, direction: "credit", category, amount: Math.round(parseFloat(split[p.id]) * 100) / 100, description: note, familyPaymentId: groupId,
+      })));
+      setMsg(`✓ Recorded ${fmtMoney(totalCents / 100)} across ${fam.players.length} players.`);
+      setTotal(""); setSplit({}); setDescription("");
+    } catch (e) { console.error(e); setMsg("Something went wrong. Please try again."); }
+    setBusy(false);
+  };
+
+  if (!families.length) return <p className="text-sm" style={{ color: C.inkSoft }}>No families with more than one player yet. Families are matched by a parent email that appears on two or more players.</p>;
+  return (
+    <div className="grid gap-3">
+      <Field label="Family">
+        <Select value={famKey} onChange={(e) => { setFamKey(e.target.value); setMsg(""); const f = families.find((x) => x.key === e.target.value); if (f && total) autoSplit(total, f); else setSplit({}); }}>
+          <option value="">Choose a family…</option>
+          {families.map((f) => <option key={f.key} value={f.key}>{f.parent}: {f.players.map((p) => p.name).join(", ")}</option>)}
+        </Select>
+      </Field>
+      {fam && (<>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <Field label="Total received"><TextInput type="number" min="0" step="0.01" value={total} onChange={(e) => { setTotal(e.target.value); autoSplit(e.target.value); }} placeholder="0.00" /></Field>
+          <Field label="Date"><TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+          <Field label="Category"><Select value={category} onChange={(e) => setCategory(e.target.value)}>{CREDIT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
+        </div>
+        <div className="rounded-xl p-3" style={{ border: `1px solid ${C.lineSoft}` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: C.inkSoft }}>Split between players (filled in to pay off what each owes, so adjust if needed)</p>
+          {fam.players.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-3 py-1">
+              <span className="text-sm" style={{ color: C.ink }}>{p.name} <span className="text-xs" style={{ color: C.inkSoft }}>· owes {fmtMoney(owed(p.id))}</span></span>
+              <TextInput type="number" min="0" step="0.01" value={split[p.id] || ""} onChange={(e) => setSplit({ ...split, [p.id]: e.target.value })} style={{ width: 120 }} />
+            </div>
+          ))}
+          {totalCents > 0 && splitCents !== totalCents && <p className="text-xs font-semibold mt-2" style={{ color: C.debit }}>⚠ Split adds up to {fmtMoney(splitCents / 100)}, not {fmtMoney(totalCents / 100)}.</p>}
+        </div>
+        <Field label="Description (optional)"><TextInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Venmo, one payment for both" /></Field>
+        <div className="flex items-center gap-3"><Button disabled={!valid || busy} onClick={submit}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Record family payment</Button></div>
+      </>)}
+      {msg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{msg}</p>}
+    </div>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
