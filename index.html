@@ -222,8 +222,8 @@ function downloadImportTemplate() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function downloadBackupJSON(teamName, players, transactions) {
-  const backup = { format: "team-treasury-backup", version: 1, exportedAt: new Date().toISOString(), teamName, players, transactions };
+function downloadBackupJSON(teamName, players, transactions, bank) {
+  const backup = { format: "team-treasury-backup", version: 1, exportedAt: new Date().toISOString(), teamName, players, transactions, ...(bank ? { bankStart: bank.start || null, cashEntries: bank.cash || [], reconciliations: bank.recs || [] } : {}) };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -819,8 +819,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
 
   const submit = async () => {
     if (!form.playerId || !form.amount || Number(form.amount) <= 0) return;
-    await addTxn({ playerId: form.playerId, date: form.date, direction: form.direction, category: form.category, amount: parseFloat(form.amount), description: form.description.trim(), createdAt: Date.now() });
-    setForm({ ...form, amount: "", description: "" });
+    await addTxn({ playerId: form.playerId, date: form.date, direction: form.direction, category: form.category, amount: parseFloat(form.amount), description: form.description.trim(), createdAt: Date.now(), ...(form.direction === "credit" ? { via: form.via || defaultVia(form.category) } : {}) });
+    setForm({ ...form, amount: "", description: "", via: undefined });
   };
 
   const [editingTxnId, setEditingTxnId] = useState(null);
@@ -866,7 +866,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
     try {
       const ids = Array.from(selectedIds);
       const amount = bulkItemized ? bulkSplit.share : parseFloat(bulkForm.amount);
-      const base = { date: bulkForm.date, direction: bulkForm.direction, category: bulkForm.category, amount, description: bulkForm.description.trim(), createdAt: Date.now() };
+      const base = { date: bulkForm.date, direction: bulkForm.direction, category: bulkForm.category, amount, description: bulkForm.description.trim(), createdAt: Date.now(), ...(bulkForm.direction === "credit" ? { via: bulkForm.via || defaultVia(bulkForm.category) } : {}) };
       if (bulkItemized) base.breakdown = { lines: bulkSplit.lines, total: bulkSplit.total, players: bulkSplit.players, share: bulkSplit.share, exact: bulkSplit.exact };
       await addBulkTxn(ids, base);
       setBulkMsg(`${bulkForm.direction === "debit" ? "Charged" : "Credited"} ${ids.length} player${ids.length === 1 ? "" : "s"} ${fmtMoney(amount)} each.`);
@@ -899,7 +899,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
               <button onClick={() => setForm({ ...form, direction: "debit", category: DEBIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: form.direction === "debit" ? C.debitTint : "transparent", color: form.direction === "debit" ? C.debit : C.inkSoft }}>Charge</button>
               <button onClick={() => setForm({ ...form, direction: "credit", category: CREDIT_CATEGORIES[0] })} className="flex-1 py-2 text-sm font-semibold" style={{ background: form.direction === "credit" ? C.creditTint : "transparent", color: form.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
             </div></Field>
-            <Field label="Category"><Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            <Field label="Category"><Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, via: undefined })}>{cats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            {form.direction === "credit" && <Field label="Received Via"><Select value={form.via || defaultVia(form.category)} onChange={(e) => setForm({ ...form, via: e.target.value })}>{VIA_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>}
             <Field label="Amount"><TextInput type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" /></Field>
             <Field label="Description (Optional)"><TextInput value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Spring tournament" /></Field>
           </div>
@@ -912,6 +913,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
               <button onClick={() => setBulkForm({ ...bulkForm, direction: "credit", category: CREDIT_CATEGORIES[0], itemize: false })} className="flex-1 py-2 text-sm font-semibold" style={{ background: bulkForm.direction === "credit" ? C.creditTint : "transparent", color: bulkForm.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
             </div></Field>
             <Field label="Category"><Select value={bulkForm.category} onChange={(e) => changeBulkCategory(e.target.value)}>{bulkCats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            {bulkForm.direction === "credit" && <Field label="Received Via"><Select value={bulkForm.via || defaultVia(bulkForm.category)} onChange={(e) => setBulkForm({ ...bulkForm, via: e.target.value })}>{VIA_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>}
             <Field label="Amount (Each)">{bulkItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{bulkSplit.total > 0 && bulkSplit.players > 0 ? fmtMoney(bulkSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={bulkForm.amount} onChange={(e) => setBulkForm({ ...bulkForm, amount: e.target.value })} placeholder="0.00" />}</Field>
             <div className="sm:col-span-2"><Field label="Description (Optional)"><TextInput value={bulkForm.description} onChange={(e) => setBulkForm({ ...bulkForm, description: e.target.value })} placeholder="e.g. Fall registration" /></Field></div>
           </div>
@@ -994,8 +996,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
                 <td className="px-4 py-3" style={{ color: C.inkSoft }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
                 <td className="px-4 py-3 text-right font-bold" style={{ color: t.direction === "debit" ? C.debit : C.credit, fontVariantNumeric: "tabular-nums" }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</td>
                 <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-3">
-                  <button onClick={() => startEditTxn(t)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
-                  <button onClick={() => { const r = prompt("Void this transaction? It stays in the history but stops counting toward the balance.\n\nReason (required):"); if (r && r.trim()) deleteTxn(t.id, r.trim()); }} title="Void" className="text-xs font-semibold" style={{ color: C.debit }}>Void</button>
+                  {t.clearedRecId ? <span className="text-xs font-semibold" title="Matched to a bank statement, so it's locked" style={{ color: C.credit, whiteSpace: "nowrap" }}>✓ Reconciled</span> : <><button onClick={() => startEditTxn(t)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
+                  <button onClick={() => { const r = prompt("Void this transaction? It stays in the history but stops counting toward the balance.\n\nReason (required):"); if (r && r.trim()) deleteTxn(t.id, r.trim()); }} title="Void" className="text-xs font-semibold" style={{ color: C.debit }}>Void</button></>}
                 </div></td>
               </tr>
             ))}</tbody>
@@ -1162,7 +1164,7 @@ function SeasonsPanel({ teamName, players, transactions, onArchiveSeason }) {
    Admin: Settings tab
 ---------------------------------------------------------------- */
 function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, venmoUsername, setVenmoUsername, treasurerEmail, setTreasurerEmail, teamLogo, setTeamLogo, players, transactions, onRestoreBackup, onArchiveSeason }) {
-  const { checkPayableTo, setCheckPayableTo } = useContext(TeamCtx);
+  const { checkPayableTo, setCheckPayableTo, bank } = useContext(TeamCtx);
   const [checkDraft, setCheckDraft] = useState(checkPayableTo || "");
   useEffect(() => setCheckDraft(checkPayableTo || ""), [checkPayableTo]);
   const [name, setName] = useState(teamName);
@@ -1299,7 +1301,7 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
         <p className="font-black mb-2" style={{ color: C.ink }}>Backup & Restore</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Download a complete copy of every player and transaction. Keep it somewhere safe (email it to yourself, save it to a drive) so you can recover everything if this site or your Firebase project is ever lost.</p>
-        <Button variant="ghost" onClick={() => downloadBackupJSON(teamName, players, transactions)}>⬇ Download Full Backup</Button>
+        <Button variant="ghost" onClick={() => downloadBackupJSON(teamName, players, transactions, bank)}>⬇ Download Full Backup</Button>
 
         <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <p className="font-black mb-1" style={{ color: C.ink }}>Import a Backup</p>
@@ -1415,7 +1417,7 @@ function AdminShell({ teamName, setTeamName, parentMessage, setParentMessage, ve
   const [statementPlayerId, setStatementPlayerId] = useState(null);
   const [txnPresetPlayer] = useState(null);
   const ledger = useLedger(players, transactions);
-  const tabs = [["dashboard", "Dashboard"], ["roster", "Roster"], ["transactions", "Transactions"], ["statements", "Statements"], ["settings", "Settings"]];
+  const tabs = [["dashboard", "Dashboard"], ["roster", "Roster"], ["transactions", "Transactions"], ["statements", "Statements"], ["bank", "Bank"], ["settings", "Settings"]];
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
@@ -1432,6 +1434,7 @@ function AdminShell({ teamName, setTeamName, parentMessage, setParentMessage, ve
         {tab === "roster" && <RosterTab teamName={teamName} players={players} ledger={ledger} addPlayer={addPlayer} addPlayersBulk={addPlayersBulk} updatePlayer={updatePlayer} deletePlayer={deletePlayer} onOpenStatement={(id) => { setStatementPlayerId(id); setTab("statements"); }} />}
         {tab === "transactions" && <TransactionsTab teamName={teamName} players={players} transactions={transactions} addTxn={addTxn} addBulkTxn={addBulkTxn} deleteTxn={deleteTxn} updateTxn={updateTxn} presetPlayerId={txnPresetPlayer} />}
         {tab === "statements" && <StatementsTab teamName={teamName} players={players} ledger={ledger} initialPlayerId={statementPlayerId} onConsumedInitial={() => setStatementPlayerId(null)} />}
+        {tab === "bank" && <BankTab />}
         {tab === "settings" && <SettingsTab teamName={teamName} setTeamName={setTeamName} parentMessage={parentMessage} setParentMessage={setParentMessage} venmoUsername={venmoUsername} setVenmoUsername={setVenmoUsername} treasurerEmail={treasurerEmail} setTreasurerEmail={setTreasurerEmail} teamLogo={teamLogo} setTeamLogo={setTeamLogo} players={players} transactions={transactions} onRestoreBackup={onRestoreBackup} onArchiveSeason={onArchiveSeason} />}
       </main>
     </div>
@@ -1774,6 +1777,8 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   const [notes, setNotes] = useState({});
   const [allTxns, setAllTxns] = useState(null);
   const [staff, setStaff] = useState([]);
+  const [cash, setCash] = useState([]);
+  const [recs, setRecs] = useState([]);
   const [loadErr, setLoadErr] = useState("");
 
   useEffect(() => {
@@ -1784,6 +1789,8 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
       db.collection("players").where("teamId", "==", teamId).onSnapshot((s) => setRawPlayers(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
       db.collection("transactions").where("teamId", "==", teamId).onSnapshot((s) => setAllTxns(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
       db.collection("staff").where("teamId", "==", teamId).onSnapshot((s) => setStaff(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
+      db.collection("cashEntries").where("teamId", "==", teamId).onSnapshot((s) => setCash(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
+      db.collection("reconciliations").where("teamId", "==", teamId).onSnapshot((s) => setRecs(s.docs.map((d) => ({ id: d.id, ...d.data() }))), fail),
       db.collection("playerNotes").where("teamId", "==", teamId).onSnapshot((s) => { const m = {}; s.docs.forEach((d) => { m[d.id] = d.data().notes || ""; }); setNotes(m); }, fail),
     ];
     return () => unsubs.forEach((u) => u());
@@ -1848,7 +1855,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   const updateTxn = async (id, patch) => {
     const old = (allTxns || []).find((t) => t.id === id);
     if (!old) return;
-    const { id: _i, voidedAt, voidedBy, voidReason, createdBy, ...base } = old;
+    const { id: _i, voidedAt, voidedBy, voidReason, createdBy, clearedRecId, ...base } = old;
     const next = { ...base, ...patch, replaces: id, editedAt: Date.now() };
     if (next.breakdown === null) delete next.breakdown;
     const ref = txnCol.doc();
@@ -1884,7 +1891,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
     });
     let skipped = 0;
     backup.transactions.forEach((t) => {
-      const { id, teamId: _t, createdBy, voidedAt, voidedBy, voidReason, ...rest } = t;
+      const { id, teamId: _t, createdBy, voidedAt, voidedBy, voidReason, clearedRecId, ...rest } = t;
       if (voidedAt || !idMap[t.playerId] || !(Number(rest.amount) > 0)) { skipped++; return; }
       // Imported records are the old app's *current* season, so they must land after any
       // earlier season archive on this team (otherwise they'd be treated as past history).
@@ -1895,6 +1902,18 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
     return { players: backup.players.length, transactions: backup.transactions.length - skipped, skipped };
   };
   const addTxns = async (list) => { const now = Date.now(); await commitWrites(list.map((t) => (b) => b.set(txnCol.doc(), stamp({ createdAt: now, ...t })))); };
+  // --- bank reconciliation ---
+  const cashCol = db.collection("cashEntries");
+  const addCash = async (e) => { await cashCol.add({ ...e, teamId, createdBy: me, createdAt: Date.now() }); };
+  const voidCash = async (id, reason) => { await cashCol.doc(id).update({ voidedAt: new Date().toISOString(), voidedBy: me, voidReason: reason }); };
+  const setBankStart = async (v) => { await teamRef.update({ bankStart: v }); };
+  const finishReconciliation = async ({ statementDate, endingBalance, opening, items }) => {
+    const recRef = db.collection("reconciliations").doc();
+    const writes = [(b) => b.set(recRef, { teamId, statementDate, endingBalance, opening, clearedCount: items.length,
+      clearedTotal: Math.round(items.reduce((x, i) => x + i.signed, 0) * 100) / 100, createdBy: me, createdAt: Date.now() })];
+    items.forEach((i) => writes.push((b) => b.update(db.collection(i.src === "txn" ? "transactions" : "cashEntries").doc(i.id), { clearedRecId: recRef.id })));
+    await commitWrites(writes);
+  };
   const addStaff = async (email, role2) => {
     const em = lc(email);
     await db.collection("staff").doc(teamId + "__" + em).set({ teamId, email: em, role: role2, name: "" });
@@ -1905,7 +1924,8 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   if (!team || !rawPlayers || !allTxns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
 
   const teamName = team.name || "Team Treasury";
-  const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "", addTxns };
+  const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "", addTxns,
+    bank: { start: team.bankStart || null, setBankStart, cash, recs, addCash, voidCash, finishReconciliation, allTxns: allTxns || [], players } };
   if (role === "coach") return <TeamCtx.Provider value={ctx}><CoachView teamName={teamName} players={players} transactions={transactions} onLogout={signOut} /></TeamCtx.Provider>;
   return (
     <TeamCtx.Provider value={ctx}>
@@ -2202,6 +2222,7 @@ function FamilyPaymentForm({ players, transactions }) {
   const [total, setTotal] = useState(""); const [date, setDate] = useState(todayStr());
   const [category, setCategory] = useState(CREDIT_CATEGORIES[0]); const [description, setDescription] = useState("");
   const [split, setSplit] = useState({}); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
+  const [via, setVia] = useState("venmo");
   const fam = families.find((f) => f.key === famKey);
   const owed = (id) => Math.max(0, Math.round(-ledger.currentBalance(id) * 100) / 100);
 
@@ -2225,7 +2246,7 @@ function FamilyPaymentForm({ players, transactions }) {
     const note = description.trim() || `Family payment (${fmtMoney(totalCents / 100)} total for ${fam.players.map((p) => p.name.split(" ")[0]).join(" & ")})`;
     try {
       await addTxns(fam.players.filter((p) => (parseFloat(split[p.id]) || 0) > 0).map((p) => ({
-        playerId: p.id, date, direction: "credit", category, amount: Math.round(parseFloat(split[p.id]) * 100) / 100, description: note, familyPaymentId: groupId,
+        playerId: p.id, date, direction: "credit", category, amount: Math.round(parseFloat(split[p.id]) * 100) / 100, description: note, familyPaymentId: groupId, via,
       })));
       setMsg(`✓ Recorded ${fmtMoney(totalCents / 100)} across ${fam.players.length} players.`);
       setTotal(""); setSplit({}); setDescription("");
@@ -2246,8 +2267,9 @@ function FamilyPaymentForm({ players, transactions }) {
         <div className="grid sm:grid-cols-3 gap-3">
           <Field label="Total Received"><TextInput type="number" min="0" step="0.01" value={total} onChange={(e) => { setTotal(e.target.value); autoSplit(e.target.value); }} placeholder="0.00" /></Field>
           <Field label="Date"><TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-          <Field label="Category"><Select value={category} onChange={(e) => setCategory(e.target.value)}>{CREDIT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
+          <Field label="Category"><Select value={category} onChange={(e) => { setCategory(e.target.value); setVia(defaultVia(e.target.value)); }}>{CREDIT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
         </div>
+        <Field label="Received Via"><Select value={via} onChange={(e) => setVia(e.target.value)}>{VIA_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
         <div className="rounded-xl p-3" style={{ border: `1px solid ${C.lineSoft}` }}>
           <p className="text-xs font-semibold mb-2" style={{ color: C.inkSoft }}>Split between players (filled in to pay off what each owes, so adjust if needed)</p>
           {fam.players.map((p) => (
@@ -2301,6 +2323,237 @@ function App() {
     <div className="tt-root" style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: C.bg }}>
       <div className="tt-main" style={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}><AppScreens /></div>
       <LegalFooter />
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   Bank tab: balance the app against the team bank account
+---------------------------------------------------------------- */
+const VIA_OPTIONS = [["venmo", "Venmo (to Treasurer)"], ["bank", "Bank Deposit (Cash or Check)"], ["none", "Not Money (Credit or Discount)"]];
+const defaultVia = (category) => (category === "Player Account Payment" ? "venmo" : "none");
+const EXPENSE_CATEGORIES = ["Coach Payment", "Tournament Entry", "League Fees", "Referees", "Uniforms & Equipment", "Field Rental", "Bank Fee", "Refund to Family", "Other"];
+const INCOME_CATEGORIES = ["Sponsor", "Fundraiser", "Donation", "Bank Interest", "Other"];
+const r2 = (n) => Math.round(n * 100) / 100;
+
+function useBankModel() {
+  const { bank } = useContext(TeamCtx);
+  const { start, cash, recs, allTxns, players } = bank;
+  return useMemo(() => {
+    if (!start) return null;
+    const after = (d) => String(d || "") > start.date;
+    const name = (id) => (players.find((p) => p.id === id) || {}).name || "—";
+    const live = (x) => !x.voidedAt;
+    const pays = allTxns.filter((t) => live(t) && t.direction === "credit" && after(t.date));
+    const bankPays = pays.filter((t) => t.via === "bank");
+    const venmoPays = pays.filter((t) => t.via === "venmo");
+    const entries = cash.filter((c) => live(c) && after(c.date));
+    const sum = (arr) => r2(arr.reduce((x, i) => x + Number(i.amount), 0));
+    const expenses = entries.filter((c) => c.kind === "expense"), income = entries.filter((c) => c.kind === "income"), transfers = entries.filter((c) => c.kind === "transfer");
+    // Every item that moves money in or out of the bank, signed (+ in, − out)
+    const items = [
+      ...bankPays.map((t) => ({ id: t.id, src: "txn", date: t.date, signed: Number(t.amount), label: `${name(t.playerId)} · ${t.category}`, note: t.description || "", cleared: !!t.clearedRecId })),
+      ...income.map((c) => ({ id: c.id, src: "cash", date: c.date, signed: Number(c.amount), label: `Deposit · ${c.category}`, note: c.description || "", cleared: !!c.clearedRecId, voidable: true })),
+      ...transfers.map((c) => ({ id: c.id, src: "cash", date: c.date, signed: Number(c.amount), label: "Venmo transfer to bank", note: c.description || "", cleared: !!c.clearedRecId, voidable: true })),
+      ...expenses.map((c) => ({ id: c.id, src: "cash", date: c.date, signed: -Number(c.amount), label: `Expense · ${c.category}`, note: c.description || "", cleared: !!c.clearedRecId, voidable: true })),
+    ].sort((a, b) => b.date.localeCompare(a.date));
+    const expected = r2(Number(start.balance) + sum(bankPays) + sum(income) + sum(transfers) - sum(expenses));
+    const venmoWaiting = r2(sum(venmoPays) - sum(transfers));
+    const sortedRecs = [...recs].sort((a, b) => String(b.statementDate).localeCompare(String(a.statementDate)) || (b.createdAt || 0) - (a.createdAt || 0));
+    const last = sortedRecs[0] || null;
+    return { items, expected, venmoWaiting, venmoReceived: sum(venmoPays), transferred: sum(transfers), recs: sortedRecs, last, opening: last ? Number(last.endingBalance) : Number(start.balance) };
+  }, [start, cash, recs, allTxns, players]);
+}
+
+function Card({ children, tint }) {
+  return <div className="rounded-2xl p-5" style={{ background: tint || C.surface, border: `1px solid ${C.line}` }}>{children}</div>;
+}
+
+function BankStartForm({ existing, onDone }) {
+  const { bank } = useContext(TeamCtx);
+  const [date, setDate] = useState(existing ? existing.date : todayStr());
+  const [balance, setBalance] = useState(existing ? String(existing.balance) : "");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    if (!date || balance === "" || isNaN(parseFloat(balance))) return;
+    setBusy(true);
+    try { await bank.setBankStart({ date, balance: r2(parseFloat(balance)) }); if (onDone) onDone(); } catch (e) { alert("Couldn't save. Please try again."); }
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <p className="font-black mb-2" style={{ color: C.ink }}>Set Your Starting Point</p>
+      <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Pick a recent bank statement and enter its ending date and ending balance. Everything dated after that day counts toward balancing. Payments marked "Received Via" Venmo or Bank Deposit, plus expenses and deposits you add here.</p>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Statement End Date"><TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+        <Field label="Ending Balance on Statement"><TextInput type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0.00" /></Field>
+      </div>
+      <div className="flex items-center gap-3 mt-4"><Button disabled={busy} onClick={save}>{busy ? <Spinner size={14} color="#fff" /> : "✓"} Save Starting Point</Button>
+        {existing && <button onClick={onDone} className="text-sm font-semibold" style={{ color: C.inkSoft }}>Cancel</button>}</div>
+    </Card>
+  );
+}
+
+function CashEntryForm() {
+  const { bank } = useContext(TeamCtx);
+  const [kind, setKind] = useState("expense");
+  const [date, setDate] = useState(todayStr()); const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]); const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
+  const pick = (k) => { setKind(k); setCategory(k === "expense" ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]); setMsg(""); };
+  const save = async () => {
+    const amt = parseFloat(amount);
+    if (!(amt > 0) || !date) return;
+    setBusy(true); setMsg("");
+    try {
+      await bank.addCash({ kind, date, amount: r2(amt), ...(kind === "transfer" ? {} : { category }), description: description.trim() });
+      setMsg(`✓ ${kind === "expense" ? "Expense" : kind === "income" ? "Deposit" : "Transfer"} of ${fmtMoney(amt)} recorded.`);
+      setAmount(""); setDescription("");
+    } catch (e) { console.error(e); setMsg("Something went wrong. Please try again."); }
+    setBusy(false);
+  };
+  const tabs = [["expense", "Expense"], ["income", "Other Deposit"], ["transfer", "Venmo Transfer"]];
+  return (
+    <Card>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <p className="font-black" style={{ color: C.ink }}>Record Team Money</p>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+          {tabs.map(([k, l]) => <button key={k} onClick={() => pick(k)} className="px-3 py-1.5 text-sm font-semibold" style={{ background: kind === k ? C.pitchTint : "transparent", color: kind === k ? C.pitchDark : C.inkSoft }}>{l}</button>)}
+        </div>
+      </div>
+      <p className="text-xs mb-3" style={{ color: C.inkSoft }}>{kind === "expense" ? "Money paid out of the team bank account (coach, tournament entry, referees, bank fees)." : kind === "income" ? "Money deposited that isn't a player payment (sponsors, fundraisers, donations)." : "When you move team money from your Venmo into the team bank account. Record the amount that arrived in the bank."}</p>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Field label="Date"><TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+        <Field label="Amount"><TextInput type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></Field>
+        {kind !== "transfer" && <Field label="Category"><Select value={category} onChange={(e) => setCategory(e.target.value)}>{(kind === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((c) => <option key={c}>{c}</option>)}</Select></Field>}
+      </div>
+      <div className="mt-3"><Field label="Description (Optional)"><TextInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder={kind === "expense" ? "e.g. Check #104, Heartland Invitational entry" : kind === "income" ? "e.g. Smith Plumbing sponsorship" : "e.g. Venmo transfer 11/20"} /></Field></div>
+      <div className="flex items-center gap-3 mt-4 flex-wrap"><Button disabled={busy || !(parseFloat(amount) > 0)} onClick={save}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Record {kind === "expense" ? "Expense" : kind === "income" ? "Deposit" : "Transfer"}</Button>
+        {msg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{msg}</p>}</div>
+    </Card>
+  );
+}
+
+function ReconcilePanel({ model }) {
+  const { bank } = useContext(TeamCtx);
+  const [stmtDate, setStmtDate] = useState(todayStr()); const [stmtBal, setStmtBal] = useState("");
+  const [checked, setChecked] = useState(() => new Set()); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
+  const open = model.items.filter((i) => !i.cleared && i.date <= stmtDate).sort((a, b) => a.date.localeCompare(b.date));
+  const clearedSum = r2(open.filter((i) => checked.has(i.id)).reduce((x, i) => x + i.signed, 0));
+  const clearedBalance = r2(model.opening + clearedSum);
+  const hasBal = stmtBal !== "" && !isNaN(parseFloat(stmtBal));
+  const diff = hasBal ? r2(parseFloat(stmtBal) - clearedBalance) : null;
+  const balanced = hasBal && Math.abs(diff) < 0.005;
+  const toggle = (id) => setChecked((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const finish = async () => {
+    if (!balanced) return;
+    if (model.last && stmtDate <= model.last.statementDate) { alert(`This statement date must be after your last reconciliation (${model.last.statementDate}).`); return; }
+    setBusy(true); setMsg("");
+    try {
+      await bank.finishReconciliation({ statementDate: stmtDate, endingBalance: r2(parseFloat(stmtBal)), opening: model.opening, items: open.filter((i) => checked.has(i.id)) });
+      setMsg(`✓ Reconciled through ${stmtDate}. Those items are now locked.`); setChecked(new Set()); setStmtBal("");
+    } catch (e) { console.error(e); setMsg("Something went wrong. Please try again."); }
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <p className="font-black mb-1" style={{ color: C.ink }}>Reconcile a Bank Statement</p>
+      <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Enter your statement's end date and ending balance, then tick each item that appears on the statement. When the difference is $0.00 you're balanced.</p>
+      <div className="grid sm:grid-cols-3 gap-3 mb-3">
+        <Field label="Statement End Date"><TextInput type="date" value={stmtDate} onChange={(e) => { setStmtDate(e.target.value); setChecked(new Set()); }} /></Field>
+        <Field label="Statement Ending Balance"><TextInput type="number" step="0.01" value={stmtBal} onChange={(e) => setStmtBal(e.target.value)} placeholder="0.00" /></Field>
+        <Field label="Starting From"><div className="text-sm py-2" style={{ color: C.ink }}>{fmtMoney(model.opening)} <span className="text-xs" style={{ color: C.inkSoft }}>{model.last ? `(reconciled ${model.last.statementDate})` : "(starting point)"}</span></div></Field>
+      </div>
+      {open.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>No uncleared items dated on or before {stmtDate}.</p> : (
+        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${C.lineSoft}` }}>
+          <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold" style={{ background: C.lineSoft, color: C.inkSoft }}>
+            <span>{open.length} uncleared item{open.length === 1 ? "" : "s"}</span>
+            <button onClick={() => setChecked(checked.size === open.length ? new Set() : new Set(open.map((i) => i.id)))} style={{ color: C.pitchDark }}>{checked.size === open.length ? "Clear All" : "Tick All"}</button>
+          </div>
+          {open.map((i) => (
+            <label key={i.id} className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer" style={{ borderTop: `1px solid ${C.lineSoft}`, background: checked.has(i.id) ? C.pitchTint : "transparent" }}>
+              <span className="flex items-center gap-3 min-w-0">
+                <input type="checkbox" checked={checked.has(i.id)} onChange={() => toggle(i.id)} style={{ width: 18, height: 18, flexShrink: 0 }} />
+                <span className="text-sm" style={{ color: C.ink, whiteSpace: "nowrap" }}>{i.date}</span>
+                <span className="text-sm truncate" style={{ color: C.ink }}>{i.label}{i.note ? <span style={{ color: C.inkSoft }}> · {i.note}</span> : null}</span>
+              </span>
+              <span className="text-sm font-bold" style={{ color: i.signed < 0 ? C.debit : C.credit, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{i.signed < 0 ? "−" : "+"}{fmtMoney(Math.abs(i.signed))}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="grid sm:grid-cols-3 gap-3 mt-4">
+        <div className="rounded-xl p-3" style={{ background: C.lineSoft }}><p className="text-xs font-semibold" style={{ color: C.inkSoft }}>Cleared Balance</p><p className="text-lg font-black" style={{ color: C.ink }}>{fmtMoney(clearedBalance)}</p></div>
+        <div className="rounded-xl p-3" style={{ background: C.lineSoft }}><p className="text-xs font-semibold" style={{ color: C.inkSoft }}>Statement Balance</p><p className="text-lg font-black" style={{ color: C.ink }}>{hasBal ? fmtMoney(parseFloat(stmtBal)) : "—"}</p></div>
+        <div className="rounded-xl p-3" style={{ background: !hasBal ? C.lineSoft : balanced ? C.creditTint : C.debitTint }}><p className="text-xs font-semibold" style={{ color: !hasBal ? C.inkSoft : balanced ? C.credit : C.debit }}>Difference</p><p className="text-lg font-black" style={{ color: !hasBal ? C.ink : balanced ? C.credit : C.debit }}>{hasBal ? (balanced ? "$0.00 ✓" : fmtMoney(diff)) : "—"}</p></div>
+      </div>
+      {hasBal && !balanced && <p className="text-xs mt-2" style={{ color: C.inkSoft }}>Not balanced yet. Check for items on the statement that aren't ticked, items ticked by mistake, or bank activity not recorded here (a fee, a deposit, a Venmo transfer).</p>}
+      <div className="flex items-center gap-3 mt-4 flex-wrap"><Button disabled={!balanced || busy} onClick={finish}>{busy ? <Spinner size={14} color="#fff" /> : "✓"} Finish Reconciliation</Button>
+        {msg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{msg}</p>}</div>
+    </Card>
+  );
+}
+
+function BankTab() {
+  const { bank, role } = useContext(TeamCtx);
+  const model = useBankModel();
+  const [editingStart, setEditingStart] = useState(false);
+  if (!bank.start || editingStart) return <div className="grid gap-5 max-w-2xl"><BankStartForm existing={bank.start} onDone={() => setEditingStart(false)} /></div>;
+  const voidItem = async (i) => {
+    const r = prompt("Void this entry? It stays in the history but stops counting.\n\nReason (required):");
+    if (r && r.trim()) { try { await bank.voidCash(i.id, r.trim()); } catch (e) { alert("Couldn't void it. Reconciled items are locked."); } }
+  };
+  return (
+    <div className="grid gap-5">
+      <div className="grid sm:grid-cols-3 gap-3">
+        <div className="rounded-2xl p-4" style={{ background: C.navy, color: "#fff" }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ opacity: 0.8 }}>Expected Bank Balance</p>
+          <p className="text-2xl font-black">{fmtMoney(model.expected)}</p>
+          <p className="text-xs mt-1" style={{ opacity: 0.8 }}>What the bank should show if everything has cleared</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: model.venmoWaiting > 0.004 ? "#E8F2FA" : C.surface, border: `1px solid ${C.line}` }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#2C6E9E" }}>Waiting in Venmo</p>
+          <p className="text-2xl font-black" style={{ color: model.venmoWaiting < -0.004 ? C.debit : C.ink }}>{fmtMoney(model.venmoWaiting)}</p>
+          <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{model.venmoWaiting < -0.004 ? "More transferred than received. Check Received Via on recent payments." : `Team money still in your Venmo: received ${fmtMoney(model.venmoReceived)}, transferred to bank ${fmtMoney(model.transferred)}`}</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Last Reconciled</p>
+          <p className="text-2xl font-black" style={{ color: C.ink }}>{model.last ? fmtMoney(model.last.endingBalance) : "Not Yet"}</p>
+          <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{model.last ? `Statement ending ${model.last.statementDate}` : `Starting point ${bank.start.date}: ${fmtMoney(bank.start.balance)}`}</p>
+        </div>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-5 items-start">
+        <CashEntryForm />
+        <ReconcilePanel model={model} />
+      </div>
+      <Card>
+        <p className="font-black mb-3" style={{ color: C.ink }}>Bank Activity Since {bank.start.date}</p>
+        {model.items.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nothing yet. Bank deposits from parents, expenses, other deposits and Venmo transfers will appear here.</p> : (
+          <div className="table-scroll"><table className="w-full text-sm">
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-3 py-2">Date</th><th className="font-semibold px-3 py-2">Item</th><th className="font-semibold px-3 py-2 text-right">Amount</th><th className="font-semibold px-3 py-2">Status</th></tr></thead>
+            <tbody>{model.items.map((i) => (
+              <tr key={i.src + i.id} className="border-t" style={{ borderColor: C.lineSoft }}>
+                <td className="px-3 py-2" style={{ color: C.ink, whiteSpace: "nowrap" }}>{i.date}</td>
+                <td className="px-3 py-2" style={{ color: C.ink }}>{i.label}{i.note ? <div className="text-xs" style={{ color: C.inkSoft }}>{i.note}</div> : null}</td>
+                <td className="px-3 py-2 text-right font-bold" style={{ color: i.signed < 0 ? C.debit : C.credit, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{i.signed < 0 ? "−" : "+"}{fmtMoney(Math.abs(i.signed))}</td>
+                <td className="px-3 py-2" style={{ whiteSpace: "nowrap" }}>{i.cleared ? <span className="text-xs font-semibold" style={{ color: C.credit }}>✓ Reconciled</span> : <span className="flex items-center gap-3"><span className="text-xs" style={{ color: C.inkSoft }}>Uncleared</span>{i.voidable && (role === "owner" || role === "treasurer") && <button onClick={() => voidItem(i)} className="text-xs font-semibold" style={{ color: C.debit }}>Void</button>}</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+      </Card>
+      {model.recs.length > 0 && (
+        <Card>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Past Reconciliations</p>
+          <div className="grid gap-1">{model.recs.map((r) => (
+            <div key={r.id} className="flex items-center justify-between text-sm py-1" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+              <span style={{ color: C.ink }}>Statement ending <b>{r.statementDate}</b></span>
+              <span style={{ color: C.inkSoft }}>{fmtMoney(r.endingBalance)} · {r.clearedCount} item{r.clearedCount === 1 ? "" : "s"} · {r.createdBy}</span>
+            </div>
+          ))}</div>
+        </Card>
+      )}
+      {!model.recs.length && <button onClick={() => setEditingStart(true)} className="text-xs font-semibold justify-self-start" style={{ color: C.inkSoft }}>Change Starting Point</button>}
     </div>
   );
 }
