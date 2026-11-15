@@ -989,8 +989,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Date</th><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Category</th><th className="font-semibold px-4 py-3">Description</th><th className="font-semibold px-4 py-3 text-right">Amount</th><th className="font-semibold px-4 py-3 text-right"></th></tr></thead>
             <tbody>{rows.map((t) => (
               <tr key={t.id} className="border-t" style={{ borderColor: C.lineSoft }}>
-                <td className="px-4 py-3" style={{ color: C.ink }}>{t.date}</td><td className="px-4 py-3 font-semibold" style={{ color: C.ink }}>{playerName(t.playerId)}</td>
-                <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: t.direction === "debit" ? C.debitTint : C.creditTint, color: t.direction === "debit" ? C.debit : C.credit }}>{t.category}</span></td>
+                <td className="px-4 py-3" style={{ color: C.ink, whiteSpace: "nowrap" }}>{t.date}</td><td className="px-4 py-3 font-semibold" style={{ color: C.ink, whiteSpace: "nowrap" }}>{playerName(t.playerId)}</td>
+                <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ whiteSpace: "nowrap", display: "inline-block", background: t.direction === "debit" ? C.debitTint : C.creditTint, color: t.direction === "debit" ? C.debit : C.credit }}>{t.category}</span></td>
                 <td className="px-4 py-3" style={{ color: C.inkSoft }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
                 <td className="px-4 py-3 text-right font-bold" style={{ color: t.direction === "debit" ? C.debit : C.credit, fontVariantNumeric: "tabular-nums" }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</td>
                 <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-3">
@@ -1172,6 +1172,9 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
   const onLogoFileChosen = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    e.target.value = "";
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { alert("Please choose a PNG or JPG image."); return; }
+    if (file.size > 10 * 1024 * 1024) { alert("That image is over 10 MB. Please choose a smaller one."); return; }
     setLogoBusy(true);
     resizeImage(file).then((uri) => setTeamLogo(uri)).catch(() => alert("Couldn't read that image.")).finally(() => setLogoBusy(false));
     e.target.value = "";
@@ -1245,13 +1248,13 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
         <p className="font-black mb-2" style={{ color: C.ink }}>Team Logo</p>
-        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign in screen and at the top of every page. A square image works best.</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign in screen and at the top of every page. Use a square PNG or JPG, at least 320 × 320 pixels and under 10 MB. A PNG with a transparent background looks best. Larger images are resized automatically.</p>
         <div className="flex items-center gap-4 flex-wrap">
           {teamLogo ? <img src={teamLogo} alt="Team Logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}`, fontSize: 32 }}>⚽</div>}
           <div className="flex items-center gap-3 flex-wrap">
             <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
               {logoBusy ? <Spinner size={14} /> : "📷"} {teamLogo ? "Replace Image" : "Upload Image"}
-              <input type="file" accept="image/*" className="hidden" onChange={onLogoFileChosen} />
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogoFileChosen} />
             </label>
             {teamLogo && <button onClick={() => setTeamLogo("")} className="text-xs font-semibold" style={{ color: C.debit }}>Remove</button>}
           </div>
@@ -1259,8 +1262,9 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
         <p className="font-black mb-2" style={{ color: C.ink }}>Parent Portal Message</p>
-        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown to every parent on their player's account page — good for a quick note like an upcoming payment deadline or a reminder about tournament fees. Leave blank to hide it entirely.</p>
-        <TextArea rows={3} value={msgDraft} onChange={(e) => setMsgDraft(e.target.value)} placeholder="e.g. Fall registration fees are due September 15th." />
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown to every parent on their player's account page — good for a quick note like an upcoming payment deadline or a reminder about tournament fees. Up to 500 characters. Leave blank to hide it entirely.</p>
+        <TextArea rows={3} maxLength={500} value={msgDraft} onChange={(e) => setMsgDraft(e.target.value.slice(0, 500))} placeholder="e.g. Fall registration fees are due September 15th." />
+        <p className="text-xs mt-1" style={{ color: (msgDraft || "").length >= 500 ? C.debit : C.inkSoft, textAlign: "right" }}>{(msgDraft || "").length}/500 characters</p>
         <div className="flex items-center gap-3 mt-3">
           <Button onClick={saveMsg}>Save Message</Button>
           {msgSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
@@ -1350,10 +1354,12 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Active Players</p>
           <p className="text-2xl font-black" style={{ color: C.ink }}>{stats.activeCount}</p>
         </div>
-        <div className="rounded-2xl p-4" style={{ background: C.debitTint }}>
+        <button type="button" onClick={() => { const el = document.getElementById("owing-list"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+          title="Show players with a balance due" className="rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.debitTint, cursor: "pointer", border: `1px solid ${C.debitTint}` }}>
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Total Outstanding</p>
           <p className="text-2xl font-black" style={{ color: C.debit }}>{fmtMoney(stats.totalOwed)}</p>
-        </div>
+          <p className="text-xs mt-1 font-semibold" style={{ color: C.debit }}>View Players ›</p>
+        </button>
         <div className="rounded-2xl p-4" style={{ background: C.creditTint }}>
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credit on File</p>
           <p className="text-2xl font-black" style={{ color: C.credit }}>{fmtMoney(stats.totalCredit)}</p>
@@ -1366,7 +1372,7 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
-        <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+        <div id="owing-list" className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}`, scrollMarginTop: 16 }}>
           <p className="font-black mb-3" style={{ color: C.ink }}>Players with a Balance Due</p>
           {stats.owing.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nobody currently owes anything. 🎉</p> : (
             <div className="grid gap-1">
