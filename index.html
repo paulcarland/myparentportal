@@ -238,7 +238,7 @@ function buildAccessCodeMailto(teamName, player) {
   const subject = `${teamName} — Parent portal access for ${player.name}`;
   const emails = [player.parentEmail, player.parentEmail2].filter(Boolean).join(" or ");
   const link = siteUrl + (window.currentTeamId ? "?team=" + window.currentTeamId : "");
-  const body = `Hi ${greetingName},\n\nYou can view ${player.name}'s team account balance and statements anytime at:\n\n${link}\n\nChoose "Parent portal" and enter your email address (${emails}). We'll email you a one-tap sign-in link. No password or code needed.\n\nThanks!`;
+  const body = `Hi ${greetingName},\n\nYou can view ${player.name}'s team account balance and statements anytime at:\n\n${link}\n\nChoose "Parent Portal" and enter your email address (${emails}). We'll email you a one-tap sign in link. No password or code needed.\n\nThanks!`;
   let url = `mailto:${player.parentEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   if (player.parentEmail2) url += `&cc=${encodeURIComponent(player.parentEmail2)}`;
   return url;
@@ -420,7 +420,7 @@ async function exportSummaryPDF(teamName, summary, totals, month) {
   doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
   doc.setFontSize(12); doc.setTextColor(...hexToRgb(C.ink)); doc.text(`Monthly Statement — ${monthLabel(month)}`, 14, 26);
   const body = summary.map((r, i) => [i + 1, r.player.name, fmtMoney(r.beginning), r.debits ? fmtMoney(r.debits) : "—", r.credits ? fmtMoney(r.credits) : "—", fmtMoney(r.ending)]);
-  doc.autoTable({ startY: 32, head: [["#", "Player", "Beginning", "Debits", "Credits", "Ending"]], body, foot: [["", "Team total", fmtMoney(totals.beginning), fmtMoney(totals.debits), fmtMoney(totals.credits), fmtMoney(totals.ending)]], styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, footStyles: { fillColor: hexToRgb(C.lineSoft), textColor: hexToRgb(C.ink), fontStyle: "bold" }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
+  doc.autoTable({ startY: 32, head: [["#", "Player", "Beginning", "Debits", "Credits", "Ending"]], body, foot: [["", "Team Total", fmtMoney(totals.beginning), fmtMoney(totals.debits), fmtMoney(totals.credits), fmtMoney(totals.ending)]], styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, footStyles: { fillColor: hexToRgb(C.lineSoft), textColor: hexToRgb(C.ink), fontStyle: "bold" }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
   doc.save(`${slug(teamName)}-statement-${month}.pdf`);
 }
 async function exportPlayerStatementPDF(teamName, player, month, stats, periodLabel, filterInfo) {
@@ -446,7 +446,7 @@ async function exportPlayerStatementPDF(teamName, player, month, stats, periodLa
   const tableRows = filterInfo ? filterInfo.rows : stats.rows;
   const withBalance = !filterInfo;
   const head = [["Date", "Category", "Description", "Debit", "Credit"].concat(withBalance ? ["Balance"] : [])];
-  const emptyText = filterInfo ? "No matching transactions" : (periodLabel ? "No activity yet this season" : "No activity this month");
+  const emptyText = filterInfo ? "No Matching Transactions" : (periodLabel ? "No Activity Yet This Season" : "No activity this month");
   const body = tableRows.length
     ? tableRows.map((t) => { const r = [t.date, t.category, pdfDescription(t), t.direction === "debit" ? fmtMoney(t.amount) : "", t.direction === "credit" ? fmtMoney(t.amount) : ""]; if (withBalance) r.push(fmtMoney(t.running)); return r; })
     : [["—", "—", emptyText, "", ""].concat(withBalance ? [""] : [])];
@@ -469,7 +469,7 @@ function deriveStatementFilter(rows, filter) {
   const sep = active.indexOf("|");
   const dir = active.slice(0, sep), cat = active.slice(sep + 1);
   const visible = rows.filter((t) => t.direction === dir && (cat === "*" || t.category === cat));
-  const label = cat === "*" ? (dir === "debit" ? "All charges" : "All payments") : `${cat} (${dir === "debit" ? "charge" : "payment"})`;
+  const label = cat === "*" ? (dir === "debit" ? "All Charges" : "All Payments") : `${cat} (${dir === "debit" ? "charge" : "payment"})`;
   return { active, debitCats, creditCats, rows: visible, info: { label, direction: dir, rows: visible, total: visible.reduce((sum, t) => sum + t.amount, 0) } };
 }
 
@@ -488,21 +488,21 @@ function BreakdownEditor({ lines, setLines, playerCount, setPlayerCount }) {
   const smallInput = { ...inputStyle };
   return (
     <div className="rounded-xl p-4" style={{ background: C.lineSoft }}>
-      <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Cost lines (the total is split equally)</p>
+      <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Cost Lines (the total is split equally)</p>
       <div className="grid gap-2">
         {lines.map((l, i) => (
           <div key={i} className="flex items-center gap-2 flex-wrap">
             <input value={l.label} onChange={(e) => setLine(i, { label: e.target.value })} placeholder="Item" style={{ ...smallInput, width: 130 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
             <input type="number" step="0.01" min="0" value={l.amount} onChange={(e) => setLine(i, { amount: e.target.value })} placeholder="0.00" style={{ ...smallInput, width: 110 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
             <input value={l.note} onChange={(e) => setLine(i, { note: e.target.value })} placeholder="Note (optional), e.g. 420 mi × $0.70" style={{ ...smallInput, flex: 1, minWidth: 170 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
-            <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))} title="Remove line" className="text-sm font-semibold" style={{ color: C.debit }}>✕</button>
+            <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))} title="Remove Line" className="text-sm font-semibold" style={{ color: C.debit }}>✕</button>
           </div>
         ))}
       </div>
-      <button onClick={() => setLines([...lines, { label: "", amount: "", note: "" }])} className="text-xs font-semibold mt-3" style={{ color: C.pitchDark }}>+ Add line</button>
+      <button onClick={() => setLines([...lines, { label: "", amount: "", note: "" }])} className="text-xs font-semibold mt-3" style={{ color: C.pitchDark }}>+ Add Line</button>
       {setPlayerCount && (
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Players sharing this cost</span>
+          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Players Sharing This Cost</span>
           <input type="number" min="1" step="1" value={playerCount} onChange={(e) => setPlayerCount(e.target.value)} style={{ ...smallInput, width: 90 }} className="rounded-lg px-3 py-2 text-sm outline-none" />
         </div>
       )}
@@ -539,15 +539,15 @@ function StatementDetail({ teamName, player, jerseyNo, month, setMonth, stats, o
   return (
     <div>
       <div className="flex items-center justify-between mb-3 print:hidden flex-wrap gap-2">
-        {onBack ? <button onClick={onBack} className="text-sm font-semibold" style={{ color: C.pitchDark }}>← Back to summary</button> : <div />}
+        {onBack ? <button onClick={onBack} className="text-sm font-semibold" style={{ color: C.pitchDark }}>← Back to Summary</button> : <div />}
         <div className="flex items-center gap-2 flex-wrap">
           {!isSeason && <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={inputStyle} className={`${inputClass} w-auto`} />}
-          <ExportButton onExport={() => exportPlayerStatementPDF(teamName, player, month, stats, isSeason ? "Full season to date" : undefined, filterInfo)} />
+          <ExportButton onExport={() => exportPlayerStatementPDF(teamName, player, month, stats, isSeason ? "Full Season to Date" : undefined, filterInfo)} />
           <Button variant="ghost" onClick={() => window.print()}>🖨 Print</Button>
           {allowEmail && (player.parentEmail ? (
-            <Button variant="ghost" disabled={emailBusy} onClick={emailWithPdf}>{emailBusy ? <Spinner size={14} /> : "✉"} Email to parent</Button>
+            <Button variant="ghost" disabled={emailBusy} onClick={emailWithPdf}>{emailBusy ? <Spinner size={14} /> : "✉"} Email to Parent</Button>
           ) : (
-            <span className="text-xs font-semibold px-3 py-2" style={{ color: C.inkSoft }} title="Add a parent email on the Roster tab to enable this">✉ No parent email on file</span>
+            <span className="text-xs font-semibold px-3 py-2" style={{ color: C.inkSoft }} title="Add a parent email on the Roster tab to enable this">✉ No Parent Email on File</span>
           ))}
         </div>
       </div>
@@ -563,26 +563,26 @@ function StatementDetail({ teamName, player, jerseyNo, month, setMonth, stats, o
         <div className="flex items-start justify-between flex-wrap gap-3 border-b pb-4 mb-4" style={{ borderColor: C.lineSoft }}>
           <div className="flex items-center gap-3">
             {jerseyNo != null && <JerseyBadge n={jerseyNo} />}
-            <div><p className="text-lg font-black" style={{ color: C.ink }}>{player.name}</p><p className="text-xs" style={{ color: C.inkSoft }}>Statement · {isSeason ? "Full season to date" : monthLabel(month)}</p></div>
+            <div><p className="text-lg font-black" style={{ color: C.ink }}>{player.name}</p><p className="text-xs" style={{ color: C.inkSoft }}>Statement · {isSeason ? "Full Season to Date" : monthLabel(month)}</p></div>
           </div>
-          <div className="text-right"><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Ending balance</p><MoneyText value={stats.ending} size="lg" /></div>
+          <div className="text-right"><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Ending Balance</p><MoneyText value={stats.ending} size="lg" /></div>
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mb-5">
-          <div className="rounded-xl p-3" style={{ background: C.lineSoft }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Beginning balance</p><MoneyText value={stats.beginning} /></div>
-          <div className="rounded-xl p-3" style={{ background: C.debitTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Debits (charges)</p><span className="text-base font-bold" style={{ color: C.debit }}>{fmtMoney(stats.debits)}</span></div>
-          <div className="rounded-xl p-3" style={{ background: C.creditTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credits (paid)</p><span className="text-base font-bold" style={{ color: C.credit }}>{fmtMoney(stats.credits)}</span></div>
+          <div className="rounded-xl p-3" style={{ background: C.lineSoft }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Beginning Balance</p><MoneyText value={stats.beginning} /></div>
+          <div className="rounded-xl p-3" style={{ background: C.debitTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Debits (Charges)</p><span className="text-base font-bold" style={{ color: C.debit }}>{fmtMoney(stats.debits)}</span></div>
+          <div className="rounded-xl p-3" style={{ background: C.creditTint }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credits (Paid)</p><span className="text-base font-bold" style={{ color: C.credit }}>{fmtMoney(stats.credits)}</span></div>
         </div>
         {isSeason && stats.rows.length > 0 && (
           <div className="flex items-center gap-3 flex-wrap mb-4 print:hidden">
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Show</span>
             <select value={activeFilter} onChange={(e) => setFilter(e.target.value)} style={{ ...inputStyle, width: "auto" }} className="rounded-lg px-3 py-2 text-sm outline-none">
-              <option value="all">All activity</option>
-              <option value="debit|*">All charges</option>
-              <option value="credit|*">All payments</option>
-              {debitCats.length > 0 && <optgroup label="Charges by category">{debitCats.map((c) => <option key={"d" + c} value={"debit|" + c}>{c}</option>)}</optgroup>}
-              {creditCats.length > 0 && <optgroup label="Payments by category">{creditCats.map((c) => <option key={"c" + c} value={"credit|" + c}>{c}</option>)}</optgroup>}
+              <option value="all">All Activity</option>
+              <option value="debit|*">All Charges</option>
+              <option value="credit|*">All Payments</option>
+              {debitCats.length > 0 && <optgroup label="Charges by Category">{debitCats.map((c) => <option key={"d" + c} value={"debit|" + c}>{c}</option>)}</optgroup>}
+              {creditCats.length > 0 && <optgroup label="Payments by Category">{creditCats.map((c) => <option key={"c" + c} value={"credit|" + c}>{c}</option>)}</optgroup>}
             </select>
-            {filterInfo && <button onClick={() => setFilter("all")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear filter</button>}
+            {filterInfo && <button onClick={() => setFilter("all")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear Filter</button>}
           </div>
         )}
         {filterInfo && (
@@ -683,18 +683,18 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
         <div className="flex items-center gap-2">
           <ExportButton onExport={() => exportRosterPDF(teamName, players, ledger)} />
           <Button variant="ghost" onClick={() => { setShowImport((s) => !s); setShowAdd(false); setEditingId(null); }}>⬆ Import</Button>
-          <Button onClick={() => { setShowAdd((s) => !s); setShowImport(false); setEditingId(null); }}>+ Add player</Button>
+          <Button onClick={() => { setShowAdd((s) => !s); setShowImport(false); setEditingId(null); }}>+ Add Player</Button>
         </div>
       </div>
       {showImport && (
         <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="font-black mb-1" style={{ color: C.ink }}>Import players</p>
+          <p className="font-black mb-1" style={{ color: C.ink }}>Import Players</p>
           <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Paste rows straight from a spreadsheet, or upload a CSV file. Include a header row — <b>Name</b> is required; Parent Name, Parent Email, Parent Name 2, Parent Email 2, Opening Balance, and Notes are optional.</p>
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
-              📄 Choose CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
+              📄 Choose CSV File<input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
             </label>
-            <button onClick={downloadImportTemplate} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Download template</button>
+            <button onClick={downloadImportTemplate} className="text-sm font-semibold" style={{ color: C.pitchDark }}>Download Template</button>
           </div>
           <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={5} placeholder={"Name, Parent Name, Parent Email, Opening Balance, Notes\nJordan Smith, Alex Smith, alex@example.com, 0,"} style={inputStyle} className="w-full rounded-lg px-3 py-2 text-sm outline-none font-mono" />
 
@@ -715,7 +715,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
                     <td className="px-3 py-2" style={{ color: C.inkSoft }}>{[it.parentName, it.parentName2].filter(Boolean).join(", ") || "—"}</td>
                     <td className="px-3 py-2" style={{ color: C.inkSoft }}>{[it.parentEmail, it.parentEmail2].filter(Boolean).join(", ") || "—"}</td>
                     <td className="px-3 py-2 text-right" style={{ color: C.inkSoft, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(it.openingBalance)}</td>
-                    <td className="px-3 py-2 text-xs font-semibold" style={{ color: !it.valid ? C.debit : it.duplicate ? C.amber : C.credit }}>{!it.valid ? "Missing name" : it.duplicate ? "Possible duplicate" : "Ready"}</td>
+                    <td className="px-3 py-2 text-xs font-semibold" style={{ color: !it.valid ? C.debit : it.duplicate ? C.amber : C.credit }}>{!it.valid ? "Missing Name" : it.duplicate ? "Possible Duplicate" : "Ready"}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -731,39 +731,39 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
       )}
       {showAdd && (
         <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="font-black mb-3" style={{ color: C.ink }}>New player</p>
+          <p className="font-black mb-3" style={{ color: C.ink }}>New Player</p>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Player name"><TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></Field>
-            <Field label="Opening balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
-            <Field label="Parent/guardian name"><TextInput value={form.parentName} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></Field>
-            <Field label="Parent email"><TextInput type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} /></Field>
-            <Field label="Second parent/guardian name (optional)"><TextInput value={form.parentName2} onChange={(e) => setForm({ ...form, parentName2: e.target.value })} /></Field>
-            <Field label="Second parent email (optional)"><TextInput type="email" value={form.parentEmail2} onChange={(e) => setForm({ ...form, parentEmail2: e.target.value })} /></Field>
+            <Field label="Player Name"><TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></Field>
+            <Field label="Opening Balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
+            <Field label="Parent/Guardian Name"><TextInput value={form.parentName} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></Field>
+            <Field label="Parent Email"><TextInput type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} /></Field>
+            <Field label="Second Parent/Guardian Name (Optional)"><TextInput value={form.parentName2} onChange={(e) => setForm({ ...form, parentName2: e.target.value })} /></Field>
+            <Field label="Second Parent Email (Optional)"><TextInput type="email" value={form.parentEmail2} onChange={(e) => setForm({ ...form, parentEmail2: e.target.value })} /></Field>
             <div className="sm:col-span-2"><Field label="Notes" hint="e.g. payment plan details, fee waivers"><TextInput value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
           </div>
-          <div className="flex gap-2 mt-4"><Button onClick={submitAdd}>✓ Add player</Button><Button variant="ghost" onClick={() => { setShowAdd(false); resetForm(); }}>Cancel</Button></div>
+          <div className="flex gap-2 mt-4"><Button onClick={submitAdd}>✓ Add Player</Button><Button variant="ghost" onClick={() => { setShowAdd(false); resetForm(); }}>Cancel</Button></div>
         </div>
       )}
       {editingId && editForm && (
         <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.pitch}` }}>
-          <p className="font-black mb-3" style={{ color: C.ink }}>Edit player</p>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Edit Player</p>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Player name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+            <Field label="Player Name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
             <div />
-            <Field label="Parent/guardian name"><TextInput value={editForm.parentName} onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })} /></Field>
-            <Field label="Parent email"><TextInput type="email" value={editForm.parentEmail} onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })} /></Field>
-            <Field label="Second parent/guardian name (optional)"><TextInput value={editForm.parentName2} onChange={(e) => setEditForm({ ...editForm, parentName2: e.target.value })} /></Field>
-            <Field label="Second parent email (optional)"><TextInput type="email" value={editForm.parentEmail2} onChange={(e) => setEditForm({ ...editForm, parentEmail2: e.target.value })} /></Field>
+            <Field label="Parent/Guardian Name"><TextInput value={editForm.parentName} onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })} /></Field>
+            <Field label="Parent Email"><TextInput type="email" value={editForm.parentEmail} onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })} /></Field>
+            <Field label="Second Parent/Guardian Name (Optional)"><TextInput value={editForm.parentName2} onChange={(e) => setEditForm({ ...editForm, parentName2: e.target.value })} /></Field>
+            <Field label="Second Parent Email (Optional)"><TextInput type="email" value={editForm.parentEmail2} onChange={(e) => setEditForm({ ...editForm, parentEmail2: e.target.value })} /></Field>
             <div className="sm:col-span-2"><Field label="Notes"><TextInput value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} /></Field></div>
           </div>
-          <div className="flex gap-2 mt-4"><Button onClick={saveEdit}>✓ Save changes</Button><Button variant="ghost" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</Button></div>
+          <div className="flex gap-2 mt-4"><Button onClick={saveEdit}>✓ Save Changes</Button><Button variant="ghost" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</Button></div>
         </div>
       )}
-      {players.length === 0 ? <EmptyState title="No players yet" body="Add your first player to start tracking fees and payments." /> : (
+      {players.length === 0 ? <EmptyState title="No Players Yet" body="Add your first player to start tracking fees and payments." /> : (
         <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
           <div className="table-scroll">
           <table className="w-full text-sm">
-            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Parent contact</th><th className="font-semibold px-4 py-3">Parent portal</th><th className="font-semibold px-4 py-3 text-right">Balance</th><th className="font-semibold px-4 py-3 text-right">Actions</th></tr></thead>
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Parent Contact</th><th className="font-semibold px-4 py-3">Parent Portal</th><th className="font-semibold px-4 py-3 text-right">Balance</th><th className="font-semibold px-4 py-3 text-right">Actions</th></tr></thead>
             <tbody>{filtered.map((p, i) => (
               <tr key={p.id} className="border-t" style={{ borderColor: C.lineSoft, opacity: p.active ? 1 : 0.5 }}>
                 <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={i + 1} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
@@ -772,15 +772,15 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
                   {(p.parentName2 || p.parentEmail2) && <div className="mt-1">{p.parentName2 || "—"}</div>}{p.parentEmail2 && <div className="text-xs">{p.parentEmail2}</div>}
                 </td>
                 <td className="px-4 py-3">{p.parentEmail || p.parentEmail2 ? (
-                  <a href={buildAccessCodeMailto(teamName, p)} title="Email the parent(s) how to sign in" className="text-xs font-semibold" style={{ color: C.pitchDark, textDecoration: "none" }}>✉ Send invite</a>
+                  <a href={buildAccessCodeMailto(teamName, p)} title="Email the parent(s) how to sign in" className="text-xs font-semibold" style={{ color: C.pitchDark, textDecoration: "none" }}>✉ Send Invite</a>
                 ) : (
-                  <span className="text-xs" title="Parents sign in with the email on file. Add one to give them access." style={{ color: C.debit }}>⚠ No email</span>
+                  <span className="text-xs" title="Parents sign in with the email on file. Add one to give them access." style={{ color: C.debit }}>⚠ No Email</span>
                 )}</td>
                 <td className="px-4 py-3 text-right"><MoneyText value={ledger.currentBalance(p.id)} /></td>
                 <td className="px-4 py-3"><div className="flex items-center justify-end gap-3">
                   <button onClick={() => startEdit(p)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
                   <button onClick={() => updatePlayer(p.id, { active: !p.active })} className="text-xs font-semibold" style={{ color: C.pitchDark }}>{p.active ? "Deactivate" : "Reactivate"}</button>
-                  <button onClick={() => { if (confirm("Delete this player? Players with any transaction history can't be deleted. Deactivate them instead.")) deletePlayer(p.id); }} title="Delete player" style={{ color: C.debit }}>🗑</button>
+                  <button onClick={() => { if (confirm("Delete this player? Players with any transaction history can't be deleted. Deactivate them instead.")) deletePlayer(p.id); }} title="Delete Player" style={{ color: C.debit }}>🗑</button>
                 </div></td>
               </tr>
             ))}</tbody>
@@ -883,11 +883,11 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
     <div>
       <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <p className="font-black" style={{ color: C.ink }}>Log a transaction</p>
+          <p className="font-black" style={{ color: C.ink }}>Log a Transaction</p>
           <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
             <button onClick={() => setMode("single")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "single" ? C.pitchTint : "transparent", color: mode === "single" ? C.pitchDark : C.inkSoft }}>Single</button>
             <button onClick={() => setMode("bulk")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "bulk" ? C.pitchTint : "transparent", color: mode === "bulk" ? C.pitchDark : C.inkSoft }}>Bulk</button>
-            <button onClick={() => setMode("family")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "family" ? C.pitchTint : "transparent", color: mode === "family" ? C.pitchDark : C.inkSoft }}>Family payment</button>
+            <button onClick={() => setMode("family")} className="px-3 py-1.5 text-sm font-semibold" style={{ background: mode === "family" ? C.pitchTint : "transparent", color: mode === "family" ? C.pitchDark : C.inkSoft }}>Family Payment</button>
           </div>
         </div>
 
@@ -901,9 +901,9 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             </div></Field>
             <Field label="Category"><Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
             <Field label="Amount"><TextInput type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" /></Field>
-            <Field label="Description (optional)"><TextInput value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Spring tournament" /></Field>
+            <Field label="Description (Optional)"><TextInput value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Spring tournament" /></Field>
           </div>
-          <Button className="mt-4" onClick={submit}>+ Add transaction</Button>
+          <Button className="mt-4" onClick={submit}>+ Add Transaction</Button>
         </>) : (<>
           <div className="grid sm:grid-cols-3 gap-3 mb-4">
             <Field label="Date"><TextInput type="date" value={bulkForm.date} onChange={(e) => setBulkForm({ ...bulkForm, date: e.target.value })} /></Field>
@@ -912,8 +912,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
               <button onClick={() => setBulkForm({ ...bulkForm, direction: "credit", category: CREDIT_CATEGORIES[0], itemize: false })} className="flex-1 py-2 text-sm font-semibold" style={{ background: bulkForm.direction === "credit" ? C.creditTint : "transparent", color: bulkForm.direction === "credit" ? C.credit : C.inkSoft }}>Payment</button>
             </div></Field>
             <Field label="Category"><Select value={bulkForm.category} onChange={(e) => changeBulkCategory(e.target.value)}>{bulkCats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
-            <Field label="Amount (each)">{bulkItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{bulkSplit.total > 0 && bulkSplit.players > 0 ? fmtMoney(bulkSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={bulkForm.amount} onChange={(e) => setBulkForm({ ...bulkForm, amount: e.target.value })} placeholder="0.00" />}</Field>
-            <div className="sm:col-span-2"><Field label="Description (optional)"><TextInput value={bulkForm.description} onChange={(e) => setBulkForm({ ...bulkForm, description: e.target.value })} placeholder="e.g. Fall registration" /></Field></div>
+            <Field label="Amount (Each)">{bulkItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{bulkSplit.total > 0 && bulkSplit.players > 0 ? fmtMoney(bulkSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={bulkForm.amount} onChange={(e) => setBulkForm({ ...bulkForm, amount: e.target.value })} placeholder="0.00" />}</Field>
+            <div className="sm:col-span-2"><Field label="Description (Optional)"><TextInput value={bulkForm.description} onChange={(e) => setBulkForm({ ...bulkForm, description: e.target.value })} placeholder="e.g. Fall registration" /></Field></div>
           </div>
           {bulkForm.direction === "debit" && (
             <label className="flex items-center gap-2 text-sm mb-3" style={{ color: C.ink }}>
@@ -927,8 +927,8 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Select players — {selectedIds.size} selected</p>
             <div className="flex items-center gap-3 flex-wrap">
               <input value={bulkQuery} onChange={(e) => setBulkQuery(e.target.value)} placeholder="🔍 Search…" style={inputStyle} className="rounded-lg px-2 py-1 text-xs outline-none w-40" />
-              <button onClick={selectActiveOnly} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Active only</button>
-              <button onClick={selectAllFiltered} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Select all</button>
+              <button onClick={selectActiveOnly} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Active Only</button>
+              <button onClick={selectAllFiltered} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Select All</button>
               <button onClick={clearAllFiltered} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear</button>
             </div>
           </div>
@@ -952,7 +952,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
       </div>
       {editingTxnId && editTxnForm && (
         <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.pitch}` }}>
-          <p className="font-black mb-3" style={{ color: C.ink }}>Edit transaction</p>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Edit Transaction</p>
           <div className="grid sm:grid-cols-3 gap-3">
             <Field label="Player"><Select value={editTxnForm.playerId} onChange={(e) => setEditTxnForm({ ...editTxnForm, playerId: e.target.value })}>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
             <Field label="Date"><TextInput type="date" value={editTxnForm.date} onChange={(e) => setEditTxnForm({ ...editTxnForm, date: e.target.value })} /></Field>
@@ -962,7 +962,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             </div></Field>
             <Field label="Category"><Select value={editTxnForm.category} onChange={(e) => setEditTxnForm({ ...editTxnForm, category: e.target.value })}>{legacyEditCat && <option key={legacyEditCat} value={legacyEditCat}>{legacyEditCat} (previous label)</option>}{editTxnCats.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
             <Field label="Amount">{editItemized ? <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ border: `1px solid ${C.line}`, background: C.lineSoft, color: C.ink }}>{editSplit.total > 0 && editSplit.players > 0 ? fmtMoney(editSplit.share) : "—"}</div> : <TextInput type="number" step="0.01" min="0" value={editTxnForm.amount} onChange={(e) => setEditTxnForm({ ...editTxnForm, amount: e.target.value })} />}</Field>
-            <Field label="Description (optional)"><TextInput value={editTxnForm.description} onChange={(e) => setEditTxnForm({ ...editTxnForm, description: e.target.value })} /></Field>
+            <Field label="Description (Optional)"><TextInput value={editTxnForm.description} onChange={(e) => setEditTxnForm({ ...editTxnForm, description: e.target.value })} /></Field>
           </div>
           {editTxnForm.direction === "debit" && (
             <div className="mt-4">
@@ -973,16 +973,16 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
               {editItemized && <BreakdownEditor lines={editTxnForm.lines} setLines={(l) => setEditTxnForm({ ...editTxnForm, lines: l })} playerCount={editTxnForm.players} setPlayerCount={(v) => setEditTxnForm({ ...editTxnForm, players: v })} />}
             </div>
           )}
-          <div className="flex gap-2 mt-4"><Button onClick={saveEditTxn}>✓ Save changes</Button><Button variant="ghost" onClick={() => { setEditingTxnId(null); setEditTxnForm(null); }}>Cancel</Button></div>
+          <div className="flex gap-2 mt-4"><Button onClick={saveEditTxn}>✓ Save Changes</Button><Button variant="ghost" onClick={() => { setEditingTxnId(null); setEditTxnForm(null); }}>Cancel</Button></div>
         </div>
       )}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <Select value={filterPlayer} onChange={(e) => setFilterPlayer(e.target.value)} className="w-auto"><option value="all">All players</option>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
+        <Select value={filterPlayer} onChange={(e) => setFilterPlayer(e.target.value)} className="w-auto"><option value="all">All Players</option>{players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
         <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={inputStyle} className={`${inputClass} w-auto`} />
-        {filterMonth && <button onClick={() => setFilterMonth("")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear month</button>}
+        {filterMonth && <button onClick={() => setFilterMonth("")} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear Month</button>}
         <ExportButton onExport={() => exportTransactionsPDF(teamName, rows, playerName, filterMonth)} className="ml-auto" />
       </div>
-      {rows.length === 0 ? <EmptyState title="No transactions" body="Logged fees, deposits, and payments will show up here." /> : (
+      {rows.length === 0 ? <EmptyState title="No Transactions" body="Logged fees, deposits, and payments will show up here." /> : (
         <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
           <div className="table-scroll">
           <table className="w-full text-sm">
@@ -1033,7 +1033,7 @@ function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedI
           <ExportButton onExport={() => exportSummaryPDF(teamName, summary, totals, month)} />
         </div>
       </div>
-      {players.length === 0 ? <EmptyState title="Nothing to show yet" body="Add players and transactions to generate statements." /> : (
+      {players.length === 0 ? <EmptyState title="Nothing to Show Yet" body="Add players and transactions to generate statements." /> : (
         <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
           <div className="table-scroll">
           <table className="w-full text-sm">
@@ -1049,7 +1049,7 @@ function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedI
               </tr>
             ))}</tbody>
             <tfoot><tr className="border-t-2" style={{ borderColor: C.line, background: C.lineSoft }}>
-              <td className="px-4 py-3 font-black" style={{ color: C.ink }}>Team total</td>
+              <td className="px-4 py-3 font-black" style={{ color: C.ink }}>Team Total</td>
               <td className="px-4 py-3 text-right font-bold" style={{ color: C.ink }}>{fmtMoney(totals.beginning)}</td>
               <td className="px-4 py-3 text-right font-bold" style={{ color: C.debit }}>{fmtMoney(totals.debits)}</td>
               <td className="px-4 py-3 text-right font-bold" style={{ color: C.credit }}>{fmtMoney(totals.credits)}</td>
@@ -1088,7 +1088,7 @@ function SeasonsPanel({ teamName, players, transactions, onArchiveSeason }) {
   useEffect(() => { loadArchives(); }, []);
 
   const confirmArchive = async () => {
-    if (!confirm(`This moves all ${players.length} players and ${transactions.length} transactions into a permanent "${label.trim() || "Season archive"}" record and starts a fresh transaction list (the old entries stay saved in the history)${carryForward ? " (each player's current balance becomes their new opening balance)" : " and resets every player's balance to zero"}. This cannot be undone. Continue?`)) return;
+    if (!confirm(`This moves all ${players.length} players and ${transactions.length} transactions into a permanent "${label.trim() || "Season Archive"}" record and starts a fresh transaction list (the old entries stay saved in the history)${carryForward ? " (each player's current balance becomes their new opening balance)" : " and resets every player's balance to zero"}. This cannot be undone. Continue?`)) return;
     setBusy(true); setMsg("");
     try {
       await onArchiveSeason(label, carryForward);
@@ -1105,18 +1105,18 @@ function SeasonsPanel({ teamName, players, transactions, onArchiveSeason }) {
       <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Close out a season by moving its transaction history into a permanent, read-only record — the live roster and balances start clean for the next one. Players stay on the roster; only the transaction ledger and balances reset.</p>
 
       {!showForm ? (
-        <Button variant="ghost" onClick={() => setShowForm(true)}>+ Archive current season</Button>
+        <Button variant="ghost" onClick={() => setShowForm(true)}>+ Archive Current Season</Button>
       ) : (
         <div className="rounded-xl p-4 mb-2" style={{ background: C.lineSoft }}>
-          <Field label="Season label" hint='e.g. "2025–2026 Fall Season"'>
-            <TextInput value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Season label" />
+          <Field label="Season Label" hint='e.g. "2025–2026 Fall Season"'>
+            <TextInput value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Season Label" />
           </Field>
           <label className="flex items-center gap-2 mt-3 text-sm" style={{ color: C.ink }}>
             <input type="checkbox" checked={carryForward} onChange={(e) => setCarryForward(e.target.checked)} />
             Carry forward each player's current balance as their new opening balance
           </label>
           <div className="flex items-center gap-3 mt-4 flex-wrap">
-            <Button variant="danger" disabled={busy} onClick={confirmArchive}>{busy ? <Spinner size={14} /> : "📦"} Archive & start fresh</Button>
+            <Button variant="danger" disabled={busy} onClick={confirmArchive}>{busy ? <Spinner size={14} /> : "📦"} Archive & Start Fresh</Button>
             <Button variant="ghost" onClick={() => { setShowForm(false); setLabel(""); }}>Cancel</Button>
           </div>
         </div>
@@ -1124,7 +1124,7 @@ function SeasonsPanel({ teamName, players, transactions, onArchiveSeason }) {
       {msg && <p className="text-sm font-semibold mt-2 mb-2" style={{ color: C.pitchDark }}>{msg}</p>}
 
       <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Past seasons</p>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkSoft }}>Past Seasons</p>
         {loading ? <Spinner size={16} /> : archives.length === 0 ? (
           <p className="text-sm" style={{ color: C.inkSoft }}>No archived seasons yet.</p>
         ) : (
@@ -1240,17 +1240,17 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
   return (
     <div className="grid gap-5 max-w-lg">
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-3" style={{ color: C.ink }}>Team name</p>
+        <p className="font-black mb-3" style={{ color: C.ink }}>Team Name</p>
         <div className="flex gap-2"><TextInput value={name} onChange={(e) => setName(e.target.value)} /><Button onClick={() => setTeamName(name)}>Save</Button></div>
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.ink }}>Team logo</p>
-        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign-in screen and at the top of every page. A square image works best.</p>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Team Logo</p>
+        <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign in screen and at the top of every page. A square image works best.</p>
         <div className="flex items-center gap-4 flex-wrap">
-          {teamLogo ? <img src={teamLogo} alt="Team logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}`, fontSize: 32 }}>⚽</div>}
+          {teamLogo ? <img src={teamLogo} alt="Team Logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}`, fontSize: 32 }}>⚽</div>}
           <div className="flex items-center gap-3 flex-wrap">
             <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
-              {logoBusy ? <Spinner size={14} /> : "📷"} {teamLogo ? "Replace image" : "Upload image"}
+              {logoBusy ? <Spinner size={14} /> : "📷"} {teamLogo ? "Replace Image" : "Upload Image"}
               <input type="file" accept="image/*" className="hidden" onChange={onLogoFileChosen} />
             </label>
             {teamLogo && <button onClick={() => setTeamLogo("")} className="text-xs font-semibold" style={{ color: C.debit }}>Remove</button>}
@@ -1258,50 +1258,50 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
         </div>
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.ink }}>Parent portal message</p>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Parent Portal Message</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown to every parent on their player's account page — good for a quick note like an upcoming payment deadline or a reminder about tournament fees. Leave blank to hide it entirely.</p>
         <TextArea rows={3} value={msgDraft} onChange={(e) => setMsgDraft(e.target.value)} placeholder="e.g. Fall registration fees are due September 15th." />
         <div className="flex items-center gap-3 mt-3">
-          <Button onClick={saveMsg}>Save message</Button>
+          <Button onClick={saveMsg}>Save Message</Button>
           {msgSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
         </div>
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.ink }}>Payment options (Venmo)</p>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Payment Options (Venmo)</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Adds a "Make a Payment" button to every parent's account page. Leave the username blank to hide it.</p>
-        <Field label="Venmo username" hint="Just the username, no @ or full link needed">
+        <Field label="Venmo Username" hint="Just the username, no @ or full link needed">
           <TextInput value={venmoDraft} onChange={(e) => setVenmoDraft(e.target.value)} placeholder="e.g. Jane-Smith" />
         </Field>
-        <div className="mt-3"><Field label="Make checks payable to" hint="Optional. Shown to parents under the payment button.">
+        <div className="mt-3"><Field label="Make Checks Payable To" hint="Optional. Shown to parents under the payment button.">
           <TextInput value={checkDraft} onChange={(e) => setCheckDraft(e.target.value)} placeholder="e.g. Your Soccer Club" />
         </Field></div>
         <div className="flex items-center gap-3 mt-3">
-          <Button onClick={saveVenmo}>Save payment options</Button>
+          <Button onClick={saveVenmo}>Save Payment Options</Button>
           {venmoSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
         </div>
       </div>
       <TeamAccessPanel />
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.ink }}>Contact info</p>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Contact Info</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Adds a "Message the Treasurer" button to every parent's account page, pre-addressed to this email. Leave blank to hide it.</p>
-        <Field label="Treasurer email">
+        <Field label="Treasurer Email">
           <TextInput type="email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} placeholder="you@example.com" />
         </Field>
         <div className="flex items-center gap-3 mt-3">
-          <Button onClick={saveEmail}>Save email</Button>
+          <Button onClick={saveEmail}>Save Email</Button>
           {emailSaved && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>✓ Saved</p>}
         </div>
       </div>
       <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.ink }}>Backup & restore</p>
+        <p className="font-black mb-2" style={{ color: C.ink }}>Backup & Restore</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Download a complete copy of every player and transaction. Keep it somewhere safe (email it to yourself, save it to a drive) so you can recover everything if this site or your Firebase project is ever lost.</p>
-        <Button variant="ghost" onClick={() => downloadBackupJSON(teamName, players, transactions)}>⬇ Download full backup</Button>
+        <Button variant="ghost" onClick={() => downloadBackupJSON(teamName, players, transactions)}>⬇ Download Full Backup</Button>
 
         <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-          <p className="font-black mb-1" style={{ color: C.ink }}>Import a backup</p>
+          <p className="font-black mb-1" style={{ color: C.ink }}>Import a Backup</p>
           <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Bring in players and transactions from a backup file, including one downloaded from the original app. Works only while this team has no players or transactions yet.</p>
           <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
-            📄 Choose backup file<input type="file" accept=".json,application/json" className="hidden" onChange={onBackupFileChosen} />
+            📄 Choose Backup File<input type="file" accept=".json,application/json" className="hidden" onChange={onBackupFileChosen} />
           </label>
           {restoreError && <p className="text-xs font-semibold mt-2" style={{ color: C.debit }}>{restoreError}</p>}
           {restorePreview && (
@@ -1309,7 +1309,7 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
               <p className="text-sm mb-3" style={{ color: C.ink }}>
                 Backup from <b>{new Date(restorePreview.exportedAt).toLocaleString()}</b> — {restorePreview.players.length} player{restorePreview.players.length === 1 ? "" : "s"}, {restorePreview.transactions.length} transaction{restorePreview.transactions.length === 1 ? "" : "s"}.
               </p>
-              <Button variant="danger" disabled={restoreBusy} onClick={confirmRestore}>{restoreBusy ? <Spinner size={14} /> : "⬆"} Import this backup</Button>
+              <Button variant="danger" disabled={restoreBusy} onClick={confirmRestore}>{restoreBusy ? <Spinner size={14} /> : "⬆"} Import This Backup</Button>
             </div>
           )}
           {restoreMsg && <p className="text-sm font-semibold mt-2" style={{ color: C.pitchDark }}>{restoreMsg}</p>}
@@ -1317,8 +1317,8 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
       </div>
       <SeasonsPanel teamName={teamName} players={players} transactions={transactions} onArchiveSeason={onArchiveSeason} />
       <div className="rounded-2xl p-5" style={{ background: C.navyTint, border: `1px solid ${C.line}` }}>
-        <p className="font-black mb-2" style={{ color: C.navy }}>Data & security</p>
-        <p className="text-sm" style={{ color: C.inkSoft }}>Records are protected by sign-in. Only people listed under Team access can see this team's records, parents see only their own player, and other teams can't see anything here. Transactions can't be deleted or silently changed. Edits and voids keep the original with who did it and why. Don't store bank account numbers or similar here.</p>
+        <p className="font-black mb-2" style={{ color: C.navy }}>Data & Security</p>
+        <p className="text-sm" style={{ color: C.inkSoft }}>Records are protected by sign in. Only people listed under Team Access can see this team's records, parents see only their own player, and other teams can't see anything here. Transactions can't be deleted or silently changed. Edits and voids keep the original with who did it and why. Don't store bank account numbers or similar here.</p>
       </div>
     </div>
   );
@@ -1347,19 +1347,19 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
     <div>
       <div className="grid sm:grid-cols-4 gap-3 mb-5">
         <div className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Active players</p>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Active Players</p>
           <p className="text-2xl font-black" style={{ color: C.ink }}>{stats.activeCount}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ background: C.debitTint }}>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Total outstanding</p>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.debit }}>Total Outstanding</p>
           <p className="text-2xl font-black" style={{ color: C.debit }}>{fmtMoney(stats.totalOwed)}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ background: C.creditTint }}>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credit on file</p>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.credit }}>Credit on File</p>
           <p className="text-2xl font-black" style={{ color: C.credit }}>{fmtMoney(stats.totalCredit)}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Collected this month</p>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Collected This Month</p>
           <p className="text-2xl font-black" style={{ color: C.ink }}>{fmtMoney(stats.monthCollected)}</p>
           <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{fmtMoney(stats.monthCharged)} charged</p>
         </div>
@@ -1367,7 +1367,7 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
 
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="font-black mb-3" style={{ color: C.ink }}>Players with a balance due</p>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Players with a Balance Due</p>
           {stats.owing.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nobody currently owes anything. 🎉</p> : (
             <div className="grid gap-1">
               {stats.owing.map(({ player, balance }) => (
@@ -1380,7 +1380,7 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
           )}
         </div>
         <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-          <p className="font-black mb-3" style={{ color: C.ink }}>Recent activity</p>
+          <p className="font-black mb-3" style={{ color: C.ink }}>Recent Activity</p>
           {stats.recent.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>No transactions logged yet.</p> : (
             <div className="grid gap-1">
               {stats.recent.map((t) => (
@@ -1414,7 +1414,7 @@ function AdminShell({ teamName, setTeamName, parentMessage, setParentMessage, ve
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
-        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{canSwitch && <button onClick={onSwitchTeam} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>Switch team</button>}<button onClick={onLock} title={me} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign out</button></div>
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{canSwitch && <button onClick={onSwitchTeam} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>Switch Team</button>}<button onClick={onLock} title={me} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button></div>
       </header>
       <nav className="flex gap-1 px-5 pt-4 print:hidden tab-scroll">
         {tabs.map(([id, label]) => (
@@ -1445,18 +1445,18 @@ function CoachView({ teamName, players, transactions, onLogout }) {
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
-        <button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft, flexShrink: 0 }}>Sign out</button>
+        <button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft, flexShrink: 0 }}>Sign Out</button>
       </header>
       <main className="p-5 max-w-2xl mx-auto">
-        <p className="font-black text-lg" style={{ color: C.ink }}>Player balances</p>
+        <p className="font-black text-lg" style={{ color: C.ink }}>Player Balances</p>
         <p className="text-xs mb-4" style={{ color: C.inkSoft }}>Current balance for each active player.</p>
         {roster.length === 0 ? (
-          <EmptyState title="No players yet" body="Active players will show up here once they're added to the roster." />
+          <EmptyState title="No Players Yet" body="Active players will show up here once they're added to the roster." />
         ) : (
           <div className="rounded-2xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
             {roster.map((p, i) => {
               const bal = ledger.currentBalance(p.id);
-              const status = bal < -0.004 ? "Amount due" : bal > 0.004 ? "Credit balance" : "Paid in full";
+              const status = bal < -0.004 ? "Amount Due" : bal > 0.004 ? "Credit Balance" : "Paid in Full";
               return (
                 <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderTop: i === 0 ? "none" : `1px solid ${C.lineSoft}` }}>
                   <span className="font-semibold text-sm min-w-0" style={{ color: C.ink }}>{p.name}</span>
@@ -1485,7 +1485,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
   if (!player) return null;
   const stats = view === "season" ? ledger.seasonStats(playerId) : ledger.monthStats(playerId, month);
   const balance = ledger.currentBalance(playerId);
-  const label = balance < -0.004 ? "Amount due" : balance > 0.004 ? "Credit balance" : "Paid in full";
+  const label = balance < -0.004 ? "Amount Due" : balance > 0.004 ? "Credit Balance" : "Paid in Full";
   const venmoLink = venmoUsername ? `https://venmo.com/${venmoUsername}?txn=pay${balance < -0.004 ? `&amount=${Math.abs(balance).toFixed(2)}` : ""}&note=${encodeURIComponent(`${player.name} (${teamName})`)}` : null;
   const treasurerMailto = treasurerEmail
     ? `mailto:${treasurerEmail}?subject=${encodeURIComponent(`${teamName} — Question about ${player.name}'s account`)}`
@@ -1494,7 +1494,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
-        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>← All players</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign out</button></div>
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>← All Players</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button></div>
       </header>
       <main className="p-5 max-w-2xl mx-auto">
         {parentMessage && parentMessage.trim() && (
@@ -1522,7 +1522,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
             )}
           </div>
         )}
-        <div className="mb-4 print:hidden"><ViewSwitch value={view} onChange={setView} options={[["month", "Monthly"], ["season", "Full season"]]} /></div>
+        <div className="mb-4 print:hidden"><ViewSwitch value={view} onChange={setView} options={[["month", "Monthly"], ["season", "Full Season"]]} /></div>
         <StatementDetail teamName={teamName} player={player} month={month} setMonth={setMonth} stats={stats} period={view} monthHint />
       </main>
     </div>
@@ -1530,7 +1530,7 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
 }
 
 /* ---------------------------------------------------------------
-   Sign-in, teams, and data access
+   Sign in, teams, and data access
    Security model (enforced by firestore.rules, not just this code):
    - Treasurers/coaches sign in with Google (or an emailed link) and only
      see teams they've been added to.
@@ -1549,22 +1549,22 @@ const store = {
 };
 const siteUrl = () => window.location.origin + window.location.pathname;
 const urlParam = (k) => new URLSearchParams(window.location.search).get(k);
-// Remember which team's logo/name to show on the sign-in screen on this device.
+// Remember which team's logo/name to show on the sign in screen on this device.
 const rememberBrand = (teamId) => { if (teamId) store.set(BRAND_KEY, teamId); };
 const signOut = async () => { store.del(MODE_KEY); await window.auth.signOut(); };
 function friendlyAuthError(e) {
   const code = (e && e.code) || "";
   if (code === "auth/unauthorized-domain") return "This web address isn't approved in Firebase yet. Add it under Authentication → Settings → Authorized domains.";
-  if (code === "auth/operation-not-allowed") return "This sign-in method isn't turned on in Firebase yet (Authentication → Sign-in method).";
-  if (code === "auth/invalid-action-code" || code === "auth/expired-action-code") return "That sign-in link has expired or was already used. Request a new one.";
+  if (code === "auth/operation-not-allowed") return "This sign in method isn't turned on in Firebase yet (Authentication → Sign in method).";
+  if (code === "auth/invalid-action-code" || code === "auth/expired-action-code") return "That sign in link has expired or was already used. Request a new one.";
   if (code === "auth/invalid-email") return "That email address doesn't match the one the link was sent to.";
-  if (code === "auth/popup-blocked") return "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.";
+  if (code === "auth/popup-blocked") return "Your browser blocked the Google sign in window. Allow pop-ups for this site and try again.";
   if (code === "auth/network-request-failed") return "Couldn't reach the server. Check your connection and try again.";
-  if (code === "auth/web-storage-unsupported") return "Your browser is blocking the storage sign-in needs (often a private window or 'block all cookies'). Try a regular window, or use the emailed link instead.";
-  if (code === "auth/account-exists-with-different-credential") return "This email already signed in a different way. Use 'Email me a sign-in link' instead.";
+  if (code === "auth/web-storage-unsupported") return "Your browser is blocking the storage sign in needs (often a private window or 'block all cookies'). Try a regular window, or use the emailed link instead.";
+  if (code === "auth/account-exists-with-different-credential") return "This email already signed in a different way. Use 'Email Me a Sign In Link' instead.";
   if (code === "auth/too-many-requests") return "Too many attempts. Wait a few minutes and try again.";
   if (code === "auth/user-disabled") return "This account has been turned off in Firebase.";
-  if (code === "auth/admin-restricted-operation") return "This sign-in method isn't allowed for this project. Check Authentication → Sign-in method in Firebase.";
+  if (code === "auth/admin-restricted-operation") return "This sign in method isn't allowed for this project. Check Authentication → Sign in method in Firebase.";
   return "Something went wrong signing in. Please try again." + (code ? ` (Error: ${code})` : (e && e.message ? ` (${String(e.message).slice(0, 120)})` : ""));
 }
 async function commitWrites(writes) {
@@ -1608,7 +1608,7 @@ function Shell({ children, onBack }) {
 }
 function TeamMark({ logo, size = 120 }) {
   return logo
-    ? <img src={logo} alt="Team logo" className="mx-auto mb-5" style={{ width: size, height: size, objectFit: "contain" }} />
+    ? <img src={logo} alt="Team Logo" className="mx-auto mb-5" style={{ width: size, height: size, objectFit: "contain" }} />
     : <div className="mx-auto mb-5 rounded-2xl flex items-center justify-center" style={{ width: size, height: size, background: C.pitchTint, fontSize: size * 0.45 }}>⚽</div>;
 }
 
@@ -1633,10 +1633,10 @@ function Landing({ onPick }) {
         <p className="text-sm mt-1" style={{ color: C.inkSoft }}>Player account balances, fees, and statements.</p>
         <div className="mt-8 grid gap-3">
           <button onClick={() => onPick("parent")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.pitchDark, color: "#fff" }}>
-            <span className="font-bold">👥 Parent portal</span><span>›</span>
+            <span className="font-bold">👥 Parent Portal</span><span>›</span>
           </button>
           <button onClick={() => onPick("staff")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.surface, color: C.ink, border: `1px solid ${C.line}` }}>
-            <span className="font-bold">🔒 Treasurer or coach</span><span>›</span>
+            <span className="font-bold">🔒 Treasurer or Coach</span><span>›</span>
           </button>
         </div>
       </div>
@@ -1650,7 +1650,7 @@ function SignInScreen({ mode, onBack }) {
   const popup = async (provider, label) => {
     setErr("");
     try { await window.auth.signInWithPopup(provider); }
-    catch (e) { console.error(label + " sign-in failed:", e); if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") setErr(friendlyAuthError(e)); }
+    catch (e) { console.error(label + " sign in failed:", e); if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") setErr(friendlyAuthError(e)); }
   };
   const google = () => popup(new firebase.auth.GoogleAuthProvider(), "Google");
   const apple = () => {
@@ -1675,16 +1675,16 @@ function SignInScreen({ mode, onBack }) {
   };
   if (sent) return (
     <Shell onBack={() => setSent("")}>
-      <h2 className="font-black text-lg" style={{ color: C.ink }}>📬 Check your email</h2>
-      <p className="text-sm mt-2" style={{ color: C.inkSoft }}>We sent a sign-in link to <b style={{ color: C.ink }}>{sent}</b>. Open it on this device to sign in. It can take a minute to arrive, so check spam too.</p>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>📬 Check Your Email</h2>
+      <p className="text-sm mt-2" style={{ color: C.inkSoft }}>We sent a sign in link to <b style={{ color: C.ink }}>{sent}</b>. Open it on this device to sign in. It can take a minute to arrive, so check spam too.</p>
     </Shell>
   );
   const emailForm = (
     <form className="grid gap-3" onSubmit={sendLink}>
-      <Field label="Email address">
+      <Field label="Email Address">
         <TextInput type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} placeholder="you@example.com" autoComplete="email" style={err ? { borderColor: C.debit } : undefined} />
       </Field>
-      <Button type="submit" variant={staff ? "ghost" : "dark"} disabled={busy}>{busy ? <Spinner size={14} /> : "✉"} Email me a sign-in link</Button>
+      <Button type="submit" variant={staff ? "ghost" : "dark"} disabled={busy}>{busy ? <Spinner size={14} /> : "✉"} Email Me a Sign In Link</Button>
     </form>
   );
   const googleBtn = (
@@ -1696,7 +1696,7 @@ function SignInScreen({ mode, onBack }) {
   );
   return (
     <Shell onBack={onBack}>
-      <h2 className="font-black text-lg" style={{ color: C.ink }}>{staff ? "🔒 Treasurer or coach" : "👥 Parent portal"}</h2>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>{staff ? "🔒 Treasurer or Coach" : "👥 Parent Portal"}</h2>
       <p className="text-sm mt-1 mb-4" style={{ color: C.inkSoft }}>
         {staff ? "Sign in with the Google account (or email) your team has on file." : "Use the email address your team treasurer has on file for your player. No password needed."}
       </p>
@@ -1728,14 +1728,14 @@ function CreateTeam({ me, onCreated }) {
   };
   return (
     <Shell>
-      <h2 className="font-black text-lg" style={{ color: C.ink }}>Set up your team</h2>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>Set Up Your Team</h2>
       <p className="text-sm mt-1 mb-4" style={{ color: C.inkSoft }}>You're signed in as <b style={{ color: C.ink }}>{me}</b>, but you aren't on a team yet. Create one to become its treasurer.</p>
       <form className="grid gap-3" onSubmit={create}>
-        <Field label="Team name"><TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. U13 Boys" /></Field>
-        <Button type="submit" disabled={busy || !name.trim()}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Create team</Button>
+        <Field label="Team Name"><TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. U13 Boys" /></Field>
+        <Button type="submit" disabled={busy || !name.trim()}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Create Team</Button>
       </form>
       {err && <p className="text-xs font-semibold mt-3" style={{ color: C.debit }}>⚠ {err}</p>}
-      <p className="text-xs mt-5" style={{ color: C.inkSoft }}>Coach or co-treasurer? Ask your treasurer to add <b>{me}</b> under Settings → Team access, then sign in again. <button onClick={signOut} className="font-semibold" style={{ color: C.pitchDark }}>Sign out</button></p>
+      <p className="text-xs mt-5" style={{ color: C.inkSoft }}>Coach or co-treasurer? Ask your treasurer to add <b>{me}</b> under Settings → Team Access, then sign in again. <button onClick={signOut} className="font-semibold" style={{ color: C.pitchDark }}>Sign Out</button></p>
     </Shell>
   );
 }
@@ -1743,7 +1743,7 @@ function CreateTeam({ me, onCreated }) {
 function TeamPicker({ memberships, teams, onPick, onCreate }) {
   return (
     <Shell>
-      <h2 className="font-black text-lg mb-4" style={{ color: C.ink }}>Choose a team</h2>
+      <h2 className="font-black text-lg mb-4" style={{ color: C.ink }}>Choose a Team</h2>
       <div className="grid gap-2">
         {memberships.map((m) => (
           <button key={m.teamId} onClick={() => onPick(m.teamId)} className="flex items-center justify-between rounded-xl p-3 text-left" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
@@ -1752,8 +1752,8 @@ function TeamPicker({ memberships, teams, onPick, onCreate }) {
         ))}
       </div>
       <div className="flex items-center justify-between mt-5">
-        <button onClick={onCreate} className="text-xs font-semibold" style={{ color: C.pitchDark }}>+ Create another team</button>
-        <button onClick={signOut} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Sign out</button>
+        <button onClick={onCreate} className="text-xs font-semibold" style={{ color: C.pitchDark }}>+ Create Another Team</button>
+        <button onClick={signOut} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Sign Out</button>
       </div>
     </Shell>
   );
@@ -1783,7 +1783,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
     return () => unsubs.forEach((u) => u());
   }, [teamId]);
 
-  // Public branding (name + logo only) so the sign-in screen can show the team's logo.
+  // Public branding (name + logo only) so the sign in screen can show the team's logo.
   useEffect(() => {
     if (!team || role === "coach") return;
     rememberBrand(teamId);
@@ -1880,7 +1880,10 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
     backup.transactions.forEach((t) => {
       const { id, teamId: _t, createdBy, voidedAt, voidedBy, voidReason, ...rest } = t;
       if (voidedAt || !idMap[t.playerId] || !(Number(rest.amount) > 0)) { skipped++; return; }
-      writes.push((b) => b.set(txnCol.doc(), stamp({ ...rest, amount: Number(rest.amount), playerId: idMap[t.playerId], importedFrom: id })));
+      // Imported records are the old app's *current* season, so they must land after any
+      // earlier season archive on this team (otherwise they'd be treated as past history).
+      const orig = Number(rest.createdAt) || 0;
+      writes.push((b) => b.set(txnCol.doc(), stamp({ ...rest, amount: Number(rest.amount), playerId: idMap[t.playerId], importedFrom: id, createdAt: Math.max(orig, cutoff + 1), originalCreatedAt: orig })));
     });
     await commitWrites(writes);
     return { players: backup.players.length, transactions: backup.transactions.length - skipped, skipped };
@@ -1892,7 +1895,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   };
   const removeStaff = async (email) => { await db.collection("staff").doc(teamId + "__" + lc(email)).delete(); };
 
-  if (loadErr) return <Shell><p className="text-sm" style={{ color: C.debit }}>⚠ {loadErr}</p><button onClick={signOut} className="text-sm font-semibold mt-4" style={{ color: C.pitchDark }}>Sign out</button></Shell>;
+  if (loadErr) return <Shell><p className="text-sm" style={{ color: C.debit }}>⚠ {loadErr}</p><button onClick={signOut} className="text-sm font-semibold mt-4" style={{ color: C.pitchDark }}>Sign Out</button></Shell>;
   if (!team || !rawPlayers || !allTxns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
 
   const teamName = team.name || "Team Treasury";
@@ -1933,12 +1936,12 @@ function ParentApp({ me, kids }) {
 
   if (!kids.length) return (
     <Shell>
-      <h2 className="font-black text-lg" style={{ color: C.ink }}>No players found</h2>
+      <h2 className="font-black text-lg" style={{ color: C.ink }}>No Players Found</h2>
       <p className="text-sm mt-2" style={{ color: C.inkSoft }}>There's no player on file with the parent email <b style={{ color: C.ink }}>{me}</b>. Ask your team treasurer to check which email they have for you, then sign in with that one.</p>
       {me.endsWith("@privaterelay.appleid.com") && (
-        <p className="text-sm mt-3" style={{ color: C.ink }}>It looks like you chose <b>Hide My Email</b> with Apple, so we can't see your real address. Sign out and use <b>Email me a sign-in link</b> instead, or ask your treasurer to add <b>{me}</b> as your email on file.</p>
+        <p className="text-sm mt-3" style={{ color: C.ink }}>It looks like you chose <b>Hide My Email</b> with Apple, so we can't see your real address. Sign out and use <b>Email Me a Sign In Link</b> instead, or ask your treasurer to add <b>{me}</b> as your email on file.</p>
       )}
-      <Button variant="ghost" className="mt-4" onClick={signOut}>Sign out</Button>
+      <Button variant="ghost" className="mt-4" onClick={signOut}>Sign Out</Button>
     </Shell>
   );
   const loaded = kids.every((k) => teams[k.teamId] && txnsBy[k.id]);
@@ -1960,7 +1963,7 @@ function ParentApp({ me, kids }) {
 
   // Family overview: every player, the family total, and one payment per team.
   const total = kids.reduce((s, k) => s + balanceOf(k), 0);
-  const totalLabel = total < -0.004 ? "Family amount due" : total > 0.004 ? "Family credit balance" : "Paid in full";
+  const totalLabel = total < -0.004 ? "Family Amount Due" : total > 0.004 ? "Family Credit Balance" : "Paid in Full";
   const byTeam = {};
   kids.forEach((k) => { (byTeam[k.teamId] = byTeam[k.teamId] || []).push(k); });
   const payments = Object.entries(byTeam).map(([tid, ks]) => {
@@ -1977,8 +1980,8 @@ function ParentApp({ me, kids }) {
     <TeamCtx.Provider value={{ teamLogo: multiTeam ? "" : (firstTeam.teamLogo || "") }}>
       <div style={{ background: C.bg, minHeight: "100vh" }}>
         <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
-          <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{multiTeam ? "Your family" : (firstTeam.name || "Team Treasury")}</p></div>
-          <button onClick={signOut} className="text-sm font-semibold" style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign out</button>
+          <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{multiTeam ? "Your Family" : (firstTeam.name || "Team Treasury")}</p></div>
+          <button onClick={signOut} className="text-sm font-semibold" style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button>
         </header>
         <main className="p-5 max-w-2xl mx-auto">
           <div className="rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style={{ background: C.navy, color: "#fff" }}>
@@ -2020,14 +2023,14 @@ function ParentApp({ me, kids }) {
 function AppScreens() {
   const [user, setUser] = useState(undefined);
   const [linkErr, setLinkErr] = useState("");
-  const [picked, setPicked] = useState(null); // landing choice before sign-in
+  const [picked, setPicked] = useState(null); // landing choice before sign in
   const [memberships, setMemberships] = useState(null);
   const [teams, setTeams] = useState({});
   const [kids, setKids] = useState(null);
   const [teamId, setTeamId] = useState(store.get(TEAM_KEY));
   const [creating, setCreating] = useState(false);
 
-  // Finish an emailed sign-in link if this page was opened from one.
+  // Finish an emailed sign in link if this page was opened from one.
   useEffect(() => {
     const auth = window.auth;
     if (!auth.isSignInWithEmailLink(window.location.href)) return;
@@ -2072,7 +2075,7 @@ function AppScreens() {
     return <SignInScreen mode={picked} onBack={() => setPicked(null)} />;
   }
   if (!user.email || !user.emailVerified) return (
-    <Shell><p className="text-sm" style={{ color: C.ink }}>This account doesn't have a verified email address, so it can't be used here.</p><Button variant="ghost" className="mt-4" onClick={signOut}>Sign out</Button></Shell>
+    <Shell><p className="text-sm" style={{ color: C.ink }}>This account doesn't have a verified email address, so it can't be used here.</p><Button variant="ghost" className="mt-4" onClick={signOut}>Sign Out</Button></Shell>
   );
   if (memberships === null || kids === null) return spinner;
 
@@ -2100,10 +2103,10 @@ function TeamAccessPanel() {
     try { await addStaff(email, newRole); setEmail(""); } catch (e2) { setErr("Couldn't add them. Only the team owner can change access."); }
     setBusy(false);
   };
-  const roleLabel = { owner: "Owner", treasurer: "Treasurer", coach: "Coach (view only)" };
+  const roleLabel = { owner: "Owner", treasurer: "Treasurer", coach: "Coach (View Only)" };
   return (
     <div className="rounded-2xl p-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
-      <p className="font-black mb-2" style={{ color: C.ink }}>Team access</p>
+      <p className="font-black mb-2" style={{ color: C.ink }}>Team Access</p>
       <p className="text-sm mb-3" style={{ color: C.inkSoft }}>People who can sign in to this team's records. Coaches can see player balances but can't change anything. Treasurers can do everything except manage this list. Parents don't go here. They get in with the email on their player's record.</p>
       <div className="grid gap-2 mb-4">
         {[...staff].sort((a, b) => a.email.localeCompare(b.email)).map((s) => (
@@ -2229,13 +2232,13 @@ function FamilyPaymentForm({ players, transactions }) {
     <div className="grid gap-3">
       <Field label="Family">
         <Select value={famKey} onChange={(e) => { setFamKey(e.target.value); setMsg(""); const f = families.find((x) => x.key === e.target.value); if (f && total) autoSplit(total, f); else setSplit({}); }}>
-          <option value="">Choose a family…</option>
+          <option value="">Choose a Family…</option>
           {families.map((f) => <option key={f.key} value={f.key}>{f.parent}: {f.players.map((p) => p.name).join(", ")}</option>)}
         </Select>
       </Field>
       {fam && (<>
         <div className="grid sm:grid-cols-3 gap-3">
-          <Field label="Total received"><TextInput type="number" min="0" step="0.01" value={total} onChange={(e) => { setTotal(e.target.value); autoSplit(e.target.value); }} placeholder="0.00" /></Field>
+          <Field label="Total Received"><TextInput type="number" min="0" step="0.01" value={total} onChange={(e) => { setTotal(e.target.value); autoSplit(e.target.value); }} placeholder="0.00" /></Field>
           <Field label="Date"><TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
           <Field label="Category"><Select value={category} onChange={(e) => setCategory(e.target.value)}>{CREDIT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
         </div>
@@ -2249,8 +2252,8 @@ function FamilyPaymentForm({ players, transactions }) {
           ))}
           {totalCents > 0 && splitCents !== totalCents && <p className="text-xs font-semibold mt-2" style={{ color: C.debit }}>⚠ Split adds up to {fmtMoney(splitCents / 100)}, not {fmtMoney(totalCents / 100)}.</p>}
         </div>
-        <Field label="Description (optional)"><TextInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Venmo, one payment for both" /></Field>
-        <div className="flex items-center gap-3"><Button disabled={!valid || busy} onClick={submit}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Record family payment</Button></div>
+        <Field label="Description (Optional)"><TextInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Venmo, one payment for both" /></Field>
+        <div className="flex items-center gap-3"><Button disabled={!valid || busy} onClick={submit}>{busy ? <Spinner size={14} color="#fff" /> : "+"} Record Family Payment</Button></div>
       </>)}
       {msg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{msg}</p>}
     </div>
