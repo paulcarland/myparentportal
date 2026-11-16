@@ -184,6 +184,7 @@ const HEADER_ALIASES = {
   parentName2: ["parentname2", "parent2", "guardian2", "secondparent", "parent2name", "guardian2name"],
   parentEmail2: ["email2", "parentemail2", "guardianemail2", "secondparentemail", "parent2email"],
   openingBalance: ["balance", "openingbalance", "opening", "startingbalance"],
+  jersey: ["jersey", "jerseynumber", "jerseyno", "number", "no", "num", "uniformnumber"],
   notes: ["notes", "note", "comments", "comment"],
 };
 function mapHeaders(headers) {
@@ -209,12 +210,13 @@ function buildImportPreview(text, existingNames) {
     const balRaw = map.openingBalance !== undefined ? (r[map.openingBalance] || "").trim() : "";
     const openingBalance = balRaw ? (parseFloat(balRaw.replace(/[^0-9.-]/g, "")) || 0) : 0;
     const notes = map.notes !== undefined ? (r[map.notes] || "").trim() : "";
-    return { name, parentName, parentEmail, parentName2, parentEmail2, openingBalance, notes, valid: !!name, duplicate: !!name && existingNames.has(name.toLowerCase()) };
+    const jersey = map.jersey !== undefined ? (r[map.jersey] || "").trim().slice(0, 4) : "";
+    return { name, jersey, parentName, parentEmail, parentName2, parentEmail2, openingBalance, notes, valid: !!name, duplicate: !!name && existingNames.has(name.toLowerCase()) };
   });
   return { error: null, items };
 }
 function downloadImportTemplate() {
-  const csv = "Name,Parent Name,Parent Email,Parent Name 2,Parent Email 2,Opening Balance,Notes\nJordan Smith,Alex Smith,alex@example.com,Jamie Smith,jamie@example.com,0,\n";
+  const csv = "Name,Jersey,Parent Name,Parent Email,Parent Name 2,Parent Email 2,Opening Balance,Notes\nJordan Smith,7,Alex Smith,alex@example.com,Jamie Smith,jamie@example.com,0,\n";
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -302,7 +304,10 @@ function Spinner({ size = 15, color }) {
 function Monogram({ letter, bg }) {
   return <span className="inline-flex items-center justify-center rounded-xl font-black text-white" style={{ width: 40, height: 40, background: bg || C.pitch }}>{letter}</span>;
 }
+// A player's jersey number, or null when none is set
+const jerseyOf = (p) => (p && p.jersey != null && String(p.jersey).trim() !== "" ? String(p.jersey).trim() : null);
 function JerseyBadge({ n }) {
+  if (n == null || n === "") return null;
   return <span className="inline-flex items-center justify-center rounded-full text-xs font-black shrink-0" style={{ width: 28, height: 28, background: C.pitchTint, color: C.pitchDark, fontVariantNumeric: "tabular-nums" }}>{n}</span>;
 }
 function MoneyText({ value, className = "", size = "base" }) {
@@ -401,7 +406,7 @@ async function exportRosterPDF(teamName, players, ledger) {
   const doc = new jsPDF();
   doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
   doc.setFontSize(10); doc.setTextColor(110, 110, 110); doc.text(`Roster — ${players.length} players — generated ${todayStr()}`, 14, 24);
-  const body = players.map((p, i) => [i + 1, p.name, [p.parentName, p.parentName2].filter(Boolean).join(", ") || "—", [p.parentEmail, p.parentEmail2].filter(Boolean).join(", ") || "—", p.active ? "Active" : "Inactive", fmtMoney(ledger.currentBalance(p.id))]);
+  const body = players.map((p, i) => [jerseyOf(p) || "", p.name, [p.parentName, p.parentName2].filter(Boolean).join(", ") || "—", [p.parentEmail, p.parentEmail2].filter(Boolean).join(", ") || "—", p.active ? "Active" : "Inactive", fmtMoney(ledger.currentBalance(p.id))]);
   doc.autoTable({ startY: 30, head: [["#", "Player", "Parent/Guardian", "Parent Email", "Status", "Balance"]], body, styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, columnStyles: { 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
   doc.save(`${slug(teamName)}-roster.pdf`);
 }
@@ -419,7 +424,7 @@ async function exportSummaryPDF(teamName, summary, totals, month) {
   const doc = new jsPDF();
   doc.setFontSize(16); doc.setTextColor(...hexToRgb(C.pitchDark)); doc.text(teamName, 14, 18);
   doc.setFontSize(12); doc.setTextColor(...hexToRgb(C.ink)); doc.text(`Monthly Statement — ${monthLabel(month)}`, 14, 26);
-  const body = summary.map((r, i) => [i + 1, r.player.name, fmtMoney(r.beginning), r.debits ? fmtMoney(r.debits) : "—", r.credits ? fmtMoney(r.credits) : "—", fmtMoney(r.ending)]);
+  const body = summary.map((r, i) => [jerseyOf(r.player) || "", r.player.name, fmtMoney(r.beginning), r.debits ? fmtMoney(r.debits) : "—", r.credits ? fmtMoney(r.credits) : "—", fmtMoney(r.ending)]);
   doc.autoTable({ startY: 32, head: [["#", "Player", "Beginning", "Debits", "Credits", "Ending"]], body, foot: [["", "Team Total", fmtMoney(totals.beginning), fmtMoney(totals.debits), fmtMoney(totals.credits), fmtMoney(totals.ending)]], styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: hexToRgb(C.pitchDark), textColor: 255 }, footStyles: { fillColor: hexToRgb(C.lineSoft), textColor: hexToRgb(C.ink), fontStyle: "bold" }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }, alternateRowStyles: { fillColor: [244, 245, 240] } });
   doc.save(`${slug(teamName)}-statement-${month}.pdf`);
 }
@@ -625,11 +630,11 @@ function StatementDetail({ teamName, player, jerseyNo, month, setMonth, stats, o
 ---------------------------------------------------------------- */
 function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updatePlayer, deletePlayer, onOpenStatement }) {
   const [showAdd, setShowAdd] = useState(false); const [query, setQuery] = useState(""); const [copiedId, setCopiedId] = useState(null);
-  const [form, setForm] = useState({ name: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
-  const resetForm = () => setForm({ name: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
+  const [form, setForm] = useState({ name: "", jersey: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
+  const resetForm = () => setForm({ name: "", jersey: "", parentName: "", parentEmail: "", parentName2: "", parentEmail2: "", openingBalance: "0", notes: "" });
   const submitAdd = async () => {
     if (!form.name.trim()) return;
-    await addPlayer({ name: form.name.trim(), parentName: form.parentName.trim(), parentEmail: form.parentEmail.trim(), parentName2: form.parentName2.trim(), parentEmail2: form.parentEmail2.trim(), openingBalance: parseFloat(form.openingBalance) || 0, active: true, notes: form.notes.trim() });
+    await addPlayer({ name: form.name.trim(), jersey: (form.jersey || "").trim(), parentName: form.parentName.trim(), parentEmail: form.parentEmail.trim(), parentName2: form.parentName2.trim(), parentEmail2: form.parentEmail2.trim(), openingBalance: parseFloat(form.openingBalance) || 0, active: true, notes: form.notes.trim() });
     resetForm(); setShowAdd(false);
   };
   const filtered = players.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
@@ -639,11 +644,11 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
   const startEdit = (p) => {
     setShowAdd(false); setShowImport(false);
     setEditingId(p.id);
-    setEditForm({ name: p.name || "", parentName: p.parentName || "", parentEmail: p.parentEmail || "", parentName2: p.parentName2 || "", parentEmail2: p.parentEmail2 || "", notes: p.notes || "" });
+    setEditForm({ name: p.name || "", jersey: p.jersey != null ? String(p.jersey) : "", parentName: p.parentName || "", parentEmail: p.parentEmail || "", parentName2: p.parentName2 || "", parentEmail2: p.parentEmail2 || "", notes: p.notes || "" });
   };
   const saveEdit = async () => {
     if (!editForm.name.trim()) return;
-    await updatePlayer(editingId, { name: editForm.name.trim(), parentName: editForm.parentName.trim(), parentEmail: editForm.parentEmail.trim(), parentName2: editForm.parentName2.trim(), parentEmail2: editForm.parentEmail2.trim(), notes: editForm.notes.trim() });
+    await updatePlayer(editingId, { name: editForm.name.trim(), jersey: (editForm.jersey || "").trim(), parentName: editForm.parentName.trim(), parentEmail: editForm.parentEmail.trim(), parentName2: editForm.parentName2.trim(), parentEmail2: editForm.parentEmail2.trim(), notes: editForm.notes.trim() });
     setEditingId(null); setEditForm(null);
   };
 
@@ -669,7 +674,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
     if (validItems.length === 0) return;
     setImportBusy(true); setImportMsg("");
     try {
-      await addPlayersBulk(validItems.map((it) => ({ name: it.name, parentName: it.parentName, parentEmail: it.parentEmail, parentName2: it.parentName2, parentEmail2: it.parentEmail2, openingBalance: it.openingBalance, active: true, notes: it.notes })));
+      await addPlayersBulk(validItems.map((it) => ({ name: it.name, jersey: it.jersey || "", parentName: it.parentName, parentEmail: it.parentEmail, parentName2: it.parentName2, parentEmail2: it.parentEmail2, openingBalance: it.openingBalance, active: true, notes: it.notes })));
       setImportMsg(`Imported ${validItems.length} player${validItems.length === 1 ? "" : "s"}.`);
       setImportText("");
     } catch (e) { setImportMsg("Something went wrong — please try again."); }
@@ -689,7 +694,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
       {showImport && (
         <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
           <p className="font-black mb-1" style={{ color: C.ink }}>Import Players</p>
-          <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Paste rows straight from a spreadsheet, or upload a CSV file. Include a header row — <b>Name</b> is required; Parent Name, Parent Email, Parent Name 2, Parent Email 2, Opening Balance, and Notes are optional.</p>
+          <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Paste rows straight from a spreadsheet, or upload a CSV file. Include a header row — <b>Name</b> is required; Jersey, Parent Name, Parent Email, Parent Name 2, Parent Email 2, Opening Balance, and Notes are optional.</p>
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
               📄 Choose CSV File<input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
@@ -723,7 +728,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
           </>)}
 
           <div className="flex items-center gap-3 flex-wrap">
-            <Button disabled={importBusy || validItems.length === 0} onClick={confirmImport}>{importBusy ? <Spinner size={14} color="#fff" /> : "⬆"} Import {validItems.length || ""} player{validItems.length === 1 ? "" : "s"}</Button>
+            <Button disabled={importBusy || validItems.length === 0} onClick={confirmImport}>{importBusy ? <Spinner size={14} color="#fff" /> : "⬆"} Import {validItems.length || ""} Player{validItems.length === 1 ? "" : "s"}</Button>
             <Button variant="ghost" onClick={() => { setShowImport(false); setImportText(""); setImportMsg(""); }}>Cancel</Button>
             {importMsg && <p className="text-sm font-semibold" style={{ color: C.pitchDark }}>{importMsg}</p>}
           </div>
@@ -734,6 +739,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
           <p className="font-black mb-3" style={{ color: C.ink }}>New Player</p>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Player Name"><TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></Field>
+            <Field label="Jersey Number (Optional)"><TextInput value={form.jersey} maxLength={4} onChange={(e) => setForm({ ...form, jersey: e.target.value })} placeholder="e.g. 7" /></Field>
             <Field label="Opening Balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
             <Field label="Parent/Guardian Name"><TextInput value={form.parentName} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></Field>
             <Field label="Parent Email"><TextInput type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} /></Field>
@@ -749,6 +755,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
           <p className="font-black mb-3" style={{ color: C.ink }}>Edit Player</p>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Player Name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+            <Field label="Jersey Number (Optional)"><TextInput value={editForm.jersey} maxLength={4} onChange={(e) => setEditForm({ ...editForm, jersey: e.target.value })} placeholder="e.g. 7" /></Field>
             <div />
             <Field label="Parent/Guardian Name"><TextInput value={editForm.parentName} onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })} /></Field>
             <Field label="Parent Email"><TextInput type="email" value={editForm.parentEmail} onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })} /></Field>
@@ -766,7 +773,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
             <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Parent Contact</th><th className="font-semibold px-4 py-3">Parent Portal</th><th className="font-semibold px-4 py-3 text-right">Balance</th><th className="font-semibold px-4 py-3 text-right">Actions</th></tr></thead>
             <tbody>{filtered.map((p, i) => (
               <tr key={p.id} className="border-t" style={{ borderColor: C.lineSoft, opacity: p.active ? 1 : 0.5 }}>
-                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={i + 1} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
+                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={jerseyOf(p)} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
                 <td className="px-4 py-3" style={{ color: C.inkSoft }}>
                   <div>{p.parentName || "—"}</div>{p.parentEmail && <div className="text-xs">{p.parentEmail}</div>}
                   {(p.parentName2 || p.parentEmail2) && <div className="mt-1">{p.parentName2 || "—"}</div>}{p.parentEmail2 && <div className="text-xs">{p.parentEmail2}</div>}
@@ -938,7 +945,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             {bulkFiltered.map((p) => (
               <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 border-t" style={{ borderColor: C.lineSoft, cursor: "pointer", opacity: p.active ? 1 : 0.5 }}>
                 <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} />
-                <JerseyBadge n={numberOf[p.id]} />
+                <JerseyBadge n={jerseyOf(p)} />
                 <span className="text-sm font-semibold" style={{ color: C.ink }}>{p.name}</span>
                 {!p.active && <span className="text-xs" style={{ color: C.inkSoft }}>Inactive</span>}
               </label>
@@ -1024,7 +1031,7 @@ function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedI
     const p = players.find((pl) => pl.id === openPlayerId);
     const idx = players.findIndex((pl) => pl.id === openPlayerId);
     if (!p) { setOpenPlayerId(null); return null; }
-    return <StatementDetail teamName={teamName} player={p} jerseyNo={idx + 1} month={month} setMonth={setMonth} stats={ledger.monthStats(p.id, month)} onBack={() => setOpenPlayerId(null)} allowEmail />;
+    return <StatementDetail teamName={teamName} player={p} jerseyNo={jerseyOf(p)} month={month} setMonth={setMonth} stats={ledger.monthStats(p.id, month)} onBack={() => setOpenPlayerId(null)} allowEmail />;
   }
   return (
     <div>
@@ -1042,7 +1049,7 @@ function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedI
             <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3 text-right">Beginning</th><th className="font-semibold px-4 py-3 text-right">Debits</th><th className="font-semibold px-4 py-3 text-right">Credits</th><th className="font-semibold px-4 py-3 text-right">Ending</th><th className="font-semibold px-4 py-3 text-right"></th></tr></thead>
             <tbody>{summary.map((r, i) => (
               <tr key={r.player.id} className="border-t" style={{ borderColor: C.lineSoft }}>
-                <td className="px-4 py-3"><button onClick={() => setOpenPlayerId(r.player.id)} className="flex items-center gap-2.5 font-bold hover:underline" style={{ color: C.ink }}><JerseyBadge n={i + 1} /> {r.player.name}</button></td>
+                <td className="px-4 py-3"><button onClick={() => setOpenPlayerId(r.player.id)} className="flex items-center gap-2.5 font-bold hover:underline" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(r.player)} /> {r.player.name}</button></td>
                 <td className="px-4 py-3 text-right" style={{ color: C.inkSoft, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(r.beginning)}</td>
                 <td className="px-4 py-3 text-right font-semibold" style={{ color: C.debit }}>{r.debits ? fmtMoney(r.debits) : "—"}</td>
                 <td className="px-4 py-3 text-right font-semibold" style={{ color: C.credit }}>{r.credits ? fmtMoney(r.credits) : "—"}</td>
@@ -1380,7 +1387,7 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
             <div className="grid gap-1">
               {stats.owing.map(({ player, balance }) => (
                 <button key={player.id} onClick={() => onOpenStatement(player.id)} className="flex items-center justify-between py-2 px-1 rounded-lg hover:opacity-80" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-                  <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: C.ink }}><JerseyBadge n={stats.numberOf[player.id]} /> {player.name}</span>
+                  <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(player)} /> {player.name}</span>
                   <MoneyText value={balance} />
                 </button>
               ))}
