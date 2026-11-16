@@ -644,6 +644,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
   const startEdit = (p) => {
     setShowAdd(false); setShowImport(false);
     setEditingId(p.id);
+    setTimeout(() => { const el = document.getElementById("edit-player-form"); if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); const f = el.querySelector("input"); if (f) f.focus({ preventScroll: true }); } }, 60);
     setEditForm({ name: p.name || "", jersey: p.jersey != null ? String(p.jersey) : "", parentName: p.parentName || "", parentEmail: p.parentEmail || "", parentName2: p.parentName2 || "", parentEmail2: p.parentEmail2 || "", notes: p.notes || "" });
   };
   const saveEdit = async () => {
@@ -751,7 +752,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
         </div>
       )}
       {editingId && editForm && (
-        <div className="rounded-2xl p-5 mb-5" style={{ background: C.surface, border: `1px solid ${C.pitch}` }}>
+        <div id="edit-player-form" className="rounded-2xl p-5 mb-5" style={{ scrollMarginTop: 16,  background: C.surface, border: `1px solid ${C.pitch}` }}>
           <p className="font-black mb-3" style={{ color: C.ink }}>Edit Player</p>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Player Name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
