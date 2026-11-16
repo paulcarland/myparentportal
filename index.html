@@ -20,6 +20,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <style>
+  /* Base reset: no browser-default grey buttons; controls use the page font */
+  button { background: transparent; padding: 0; margin: 0; font: inherit; color: inherit; line-height: inherit; cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  input, select, textarea { font: inherit; }
+  /* Paragraphs and headings get spacing only from the layout, never browser defaults */
+  p, h1, h2, h3, h4 { margin: 0; }
+  /* Big numbers in summary tiles sit a little below their label */
+  .text-xs + p.text-2xl, .text-xs + p.text-lg, .text-xs + p.text-xl { margin-top: .25rem; }
+  p.uppercase + span { display: inline-block; margin-top: .25rem; }
+  /* Grid columns may shrink below their content width (prevents sideways overflow on phones) */
+  .grid > * { min-width: 0; }
+  /* Every single-line field is the same height as a button (38px) */
+  input:not([type=checkbox]):not([type=radio]):not([type=file]), select { height: 38px; }
+  /* Spacing utilities the screens use */
+  .mt-2{margin-top:.5rem} .mt-3{margin-top:.75rem} .mt-5{margin-top:1.25rem} .pt-3{padding-top:.75rem} .pt-5{padding-top:1.25rem}
+  .py-1\.5{padding-top:.375rem;padding-bottom:.375rem} .py-2\.5{padding-top:.625rem;padding-bottom:.625rem} .px-1{padding-left:.25rem;padding-right:.25rem}
+  .w-40{width:10rem} .font-normal{font-weight:400} .justify-self-start{justify-self:start}
+  @media (min-width:640px){ .sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))} }
+
   * { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #DDE1D6; }
   body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   @media print { body { background: #fff; } .print\:hidden { display: none !important; } }
@@ -234,6 +253,15 @@ function downloadBackupJSON(teamName, players, transactions, bank) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// A plain email to a player's parent(s): first email in To, second in Cc.
+function buildParentEmailMailto(teamName, player) {
+  const emails = [player.parentEmail, player.parentEmail2].map((e) => (e || "").trim()).filter(Boolean);
+  if (!emails.length) return null;
+  const subject = `${teamName} — ${player.name}`;
+  let url = `mailto:${encodeURIComponent(emails[0])}?subject=${encodeURIComponent(subject)}`;
+  if (emails[1] && emails[1].toLowerCase() !== emails[0].toLowerCase()) url += `&cc=${encodeURIComponent(emails[1])}`;
+  return url;
+}
 function buildAccessCodeMailto(teamName, player) {
   const siteUrl = window.location.origin + window.location.pathname;
   const greetingName = player.parentName ? player.parentName.split(" ")[0] : "there";
@@ -306,8 +334,8 @@ function Monogram({ letter, bg }) {
 }
 // A player's jersey number, or null when none is set
 const jerseyOf = (p) => (p && p.jersey != null && String(p.jersey).trim() !== "" ? String(p.jersey).trim() : null);
-function JerseyBadge({ n }) {
-  if (n == null || n === "") return null;
+function JerseyBadge({ n, space }) {
+  if (n == null || n === "") return space ? <span aria-hidden="true" className="inline-block shrink-0" style={{ width: 28, height: 28 }} /> : null;
   return <span className="inline-flex items-center justify-center rounded-full text-xs font-black shrink-0" style={{ width: 28, height: 28, background: C.pitchTint, color: C.pitchDark, fontVariantNumeric: "tabular-nums" }}>{n}</span>;
 }
 function MoneyText({ value, className = "", size = "base" }) {
@@ -323,13 +351,13 @@ const inputStyle = { border: `1px solid ${C.line}`, background: C.surface, color
 const inputClass = "w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2";
 function TextInput(props) { return <input {...props} style={{ ...inputStyle, ...props.style }} className={`${inputClass} ${props.className || ""}`} />; }
 function TextArea(props) { return <textarea {...props} style={{ ...inputStyle, ...props.style }} className={`${inputClass} ${props.className || ""}`} />; }
-function Select(props) { return <select {...props} style={inputStyle} className={`${inputClass} ${props.className || ""}`} />; }
+function Select(props) { return <select {...props} style={{ ...inputStyle, ...props.style }} className={`${inputClass} ${props.className || ""}`} />; }
 function Button({ children, variant = "primary", className = "", ...rest }) {
   const styles = {
-    primary: { background: C.pitch, color: "#fff" }, dark: { background: C.pitchDark, color: "#fff" },
-    ghost: { background: "transparent", color: C.ink, border: `1px solid ${C.line}` }, danger: { background: C.debitTint, color: C.debit },
+    primary: { background: C.pitch, color: "#fff", border: `1px solid ${C.pitch}` }, dark: { background: C.pitchDark, color: "#fff", border: `1px solid ${C.pitchDark}` },
+    ghost: { background: C.surface, color: C.ink, border: `1px solid ${C.line}` }, danger: { background: C.debitTint, color: C.debit, border: `1px solid ${C.debitTint}` },
   };
-  return <button {...rest} style={styles[variant]} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-50 ${className}`}>{children}</button>;
+  return <button {...rest} style={{ ...styles[variant], whiteSpace: "nowrap", justifyContent: "center", minHeight: 38 }} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-50 ${className}`}>{children}</button>;
 }
 function EmptyState({ title, body }) {
   return <div className="flex flex-col items-center justify-center text-center py-14 px-6 rounded-xl" style={{ background: C.lineSoft }}><p className="font-bold" style={{ color: C.ink }}>{title}</p><p className="text-sm mt-1 max-w-sm" style={{ color: C.inkSoft }}>{body}</p></div>;
@@ -741,12 +769,12 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Player Name"><TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></Field>
             <Field label="Jersey Number (Optional)"><TextInput value={form.jersey} maxLength={4} onChange={(e) => setForm({ ...form, jersey: e.target.value })} placeholder="e.g. 7" /></Field>
-            <Field label="Opening Balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
             <Field label="Parent/Guardian Name"><TextInput value={form.parentName} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></Field>
             <Field label="Parent Email"><TextInput type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} /></Field>
             <Field label="Second Parent/Guardian Name (Optional)"><TextInput value={form.parentName2} onChange={(e) => setForm({ ...form, parentName2: e.target.value })} /></Field>
             <Field label="Second Parent Email (Optional)"><TextInput type="email" value={form.parentEmail2} onChange={(e) => setForm({ ...form, parentEmail2: e.target.value })} /></Field>
-            <div className="sm:col-span-2"><Field label="Notes" hint="e.g. payment plan details, fee waivers"><TextInput value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
+            <Field label="Opening Balance" hint="Positive = credit on file (prepaid), negative = amount owed"><TextInput type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} /></Field>
+            <div><Field label="Notes" hint="e.g. payment plan details, fee waivers"><TextInput value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
           </div>
           <div className="flex gap-2 mt-4"><Button onClick={submitAdd}>✓ Add Player</Button><Button variant="ghost" onClick={() => { setShowAdd(false); resetForm(); }}>Cancel</Button></div>
         </div>
@@ -757,7 +785,6 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Player Name"><TextInput value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
             <Field label="Jersey Number (Optional)"><TextInput value={editForm.jersey} maxLength={4} onChange={(e) => setEditForm({ ...editForm, jersey: e.target.value })} placeholder="e.g. 7" /></Field>
-            <div />
             <Field label="Parent/Guardian Name"><TextInput value={editForm.parentName} onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })} /></Field>
             <Field label="Parent Email"><TextInput type="email" value={editForm.parentEmail} onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })} /></Field>
             <Field label="Second Parent/Guardian Name (Optional)"><TextInput value={editForm.parentName2} onChange={(e) => setEditForm({ ...editForm, parentName2: e.target.value })} /></Field>
@@ -774,7 +801,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
             <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3">Parent Contact</th><th className="font-semibold px-4 py-3">Parent Portal</th><th className="font-semibold px-4 py-3 text-right">Balance</th><th className="font-semibold px-4 py-3 text-right">Actions</th></tr></thead>
             <tbody>{filtered.map((p, i) => (
               <tr key={p.id} className="border-t" style={{ borderColor: C.lineSoft, opacity: p.active ? 1 : 0.5 }}>
-                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={jerseyOf(p)} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
+                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><JerseyBadge n={jerseyOf(p)} space={players.some((x) => jerseyOf(x))} /><div><button onClick={() => onOpenStatement(p.id)} className="font-bold hover:underline text-left" style={{ color: C.ink }}>{p.name}</button>{!p.active && <p className="text-xs" style={{ color: C.inkSoft }}>Inactive</p>}</div></div></td>
                 <td className="px-4 py-3" style={{ color: C.inkSoft }}>
                   <div>{p.parentName || "—"}</div>{p.parentEmail && <div className="text-xs">{p.parentEmail}</div>}
                   {(p.parentName2 || p.parentEmail2) && <div className="mt-1">{p.parentName2 || "—"}</div>}{p.parentEmail2 && <div className="text-xs">{p.parentEmail2}</div>}
@@ -786,6 +813,7 @@ function RosterTab({ teamName, players, ledger, addPlayer, addPlayersBulk, updat
                 )}</td>
                 <td className="px-4 py-3 text-right"><MoneyText value={ledger.currentBalance(p.id)} /></td>
                 <td className="px-4 py-3"><div className="flex items-center justify-end gap-3">
+                  {buildParentEmailMailto(teamName, p) ? <a href={buildParentEmailMailto(teamName, p)} title={"Email " + [p.parentEmail, p.parentEmail2].filter(Boolean).join(" and ")} className="text-xs font-semibold" style={{ color: C.pitchDark, textDecoration: "none", whiteSpace: "nowrap" }}>✉ Email</a> : <span className="text-xs" title="No parent email on file" style={{ color: C.line, whiteSpace: "nowrap" }}>✉ Email</span>}
                   <button onClick={() => startEdit(p)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
                   <button onClick={() => updatePlayer(p.id, { active: !p.active })} className="text-xs font-semibold" style={{ color: C.pitchDark }}>{p.active ? "Deactivate" : "Reactivate"}</button>
                   <button onClick={() => { if (confirm("Delete this player? Players with any transaction history can't be deleted. Deactivate them instead.")) deletePlayer(p.id); }} title="Delete Player" style={{ color: C.debit }}>🗑</button>
@@ -936,7 +964,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Select players — {selectedIds.size} selected</p>
             <div className="flex items-center gap-3 flex-wrap">
-              <input value={bulkQuery} onChange={(e) => setBulkQuery(e.target.value)} placeholder="🔍 Search…" style={inputStyle} className="rounded-lg px-2 py-1 text-xs outline-none w-40" />
+              <input value={bulkQuery} onChange={(e) => setBulkQuery(e.target.value)} placeholder="🔍 Search…" style={inputStyle} className="rounded-lg px-3 py-2 text-sm outline-none w-56" />
               <button onClick={selectActiveOnly} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Active Only</button>
               <button onClick={selectAllFiltered} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Select All</button>
               <button onClick={clearAllFiltered} className="text-xs font-semibold" style={{ color: C.inkSoft }}>Clear</button>
@@ -946,7 +974,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
             {bulkFiltered.map((p) => (
               <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 border-t" style={{ borderColor: C.lineSoft, cursor: "pointer", opacity: p.active ? 1 : 0.5 }}>
                 <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} />
-                <JerseyBadge n={jerseyOf(p)} />
+                <JerseyBadge n={jerseyOf(p)} space={players.some((x) => jerseyOf(x))} />
                 <span className="text-sm font-semibold" style={{ color: C.ink }}>{p.name}</span>
                 {!p.active && <span className="text-xs" style={{ color: C.inkSoft }}>Inactive</span>}
               </label>
@@ -1001,7 +1029,7 @@ function TransactionsTab({ teamName, players, transactions, addTxn, addBulkTxn, 
               <tr key={t.id} className="border-t" style={{ borderColor: C.lineSoft }}>
                 <td className="px-4 py-3" style={{ color: C.ink, whiteSpace: "nowrap" }}>{t.date}</td><td className="px-4 py-3 font-semibold" style={{ color: C.ink, whiteSpace: "nowrap" }}>{playerName(t.playerId)}</td>
                 <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ whiteSpace: "nowrap", display: "inline-block", background: t.direction === "debit" ? C.debitTint : C.creditTint, color: t.direction === "debit" ? C.debit : C.credit }}>{t.category}</span></td>
-                <td className="px-4 py-3" style={{ color: C.inkSoft }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
+                <td className="px-4 py-3" style={{ color: C.inkSoft, minWidth: 320 }}>{t.description || (hasBreakdown(t) ? "" : "—")}<BreakdownNote b={t.breakdown} /></td>
                 <td className="px-4 py-3 text-right font-bold" style={{ color: t.direction === "debit" ? C.debit : C.credit, fontVariantNumeric: "tabular-nums" }}>{t.direction === "debit" ? "−" : "+"}{fmtMoney(t.amount)}</td>
                 <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-3">
                   {t.clearedRecId ? <span className="text-xs font-semibold" title="Matched to a bank statement, so it's locked" style={{ color: C.credit, whiteSpace: "nowrap" }}>✓ Reconciled</span> : <><button onClick={() => startEditTxn(t)} className="text-xs font-semibold" style={{ color: C.pitchDark }}>Edit</button>
@@ -1050,7 +1078,7 @@ function StatementsTab({ teamName, players, ledger, initialPlayerId, onConsumedI
             <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Player</th><th className="font-semibold px-4 py-3 text-right">Beginning</th><th className="font-semibold px-4 py-3 text-right">Debits</th><th className="font-semibold px-4 py-3 text-right">Credits</th><th className="font-semibold px-4 py-3 text-right">Ending</th><th className="font-semibold px-4 py-3 text-right"></th></tr></thead>
             <tbody>{summary.map((r, i) => (
               <tr key={r.player.id} className="border-t" style={{ borderColor: C.lineSoft }}>
-                <td className="px-4 py-3"><button onClick={() => setOpenPlayerId(r.player.id)} className="flex items-center gap-2.5 font-bold hover:underline" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(r.player)} /> {r.player.name}</button></td>
+                <td className="px-4 py-3"><button onClick={() => setOpenPlayerId(r.player.id)} className="flex items-center gap-2.5 font-bold hover:underline" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(r.player)} space={players.some((x) => jerseyOf(x))} /> {r.player.name}</button></td>
                 <td className="px-4 py-3 text-right" style={{ color: C.inkSoft, fontVariantNumeric: "tabular-nums" }}>{fmtMoney(r.beginning)}</td>
                 <td className="px-4 py-3 text-right font-semibold" style={{ color: C.debit }}>{r.debits ? fmtMoney(r.debits) : "—"}</td>
                 <td className="px-4 py-3 text-right font-semibold" style={{ color: C.credit }}>{r.credits ? fmtMoney(r.credits) : "—"}</td>
@@ -1387,8 +1415,8 @@ function DashboardTab({ players, transactions, ledger, onOpenStatement }) {
           {stats.owing.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nobody currently owes anything. 🎉</p> : (
             <div className="grid gap-1">
               {stats.owing.map(({ player, balance }) => (
-                <button key={player.id} onClick={() => onOpenStatement(player.id)} className="flex items-center justify-between py-2 px-1 rounded-lg hover:opacity-80" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-                  <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(player)} /> {player.name}</span>
+                <button key={player.id} onClick={() => onOpenStatement(player.id)} className="flex items-center justify-between py-2 px-1 rounded-lg hover:opacity-80" style={{ borderTop: `1px solid ${C.lineSoft}`, minHeight: 45 }}>
+                  <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: C.ink }}><JerseyBadge n={jerseyOf(player)} space={players.some((x) => jerseyOf(x))} /> {player.name}</span>
                   <MoneyText value={balance} />
                 </button>
               ))}
@@ -1649,7 +1677,7 @@ function Landing({ onPick }) {
         <h1 className="text-2xl font-black tracking-tight" style={{ color: C.ink }}>{(brand && brand.name) || "Team Treasury"}</h1>
         <p className="text-sm mt-1" style={{ color: C.inkSoft }}>Player account balances, fees, and statements.</p>
         <div className="mt-8 grid gap-3">
-          <button onClick={() => onPick("parent")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.pitchDark, color: "#fff" }}>
+          <button onClick={() => onPick("parent")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.pitchDark, color: "#fff", border: `1px solid ${C.pitchDark}` }}>
             <span className="font-bold">👥 Parent Portal</span><span>›</span>
           </button>
           <button onClick={() => onPick("staff")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.surface, color: C.ink, border: `1px solid ${C.line}` }}>
@@ -2420,13 +2448,13 @@ function CashEntryForm() {
     } catch (e) { console.error(e); setMsg("Something went wrong. Please try again."); }
     setBusy(false);
   };
-  const tabs = [["expense", "Expense"], ["income", "Other Deposit"], ["transfer", "Venmo Transfer"]];
+  const tabs = [["expense", "Expense"], ["income", "Deposit"], ["transfer", "Venmo Transfer"]];
   return (
     <Card>
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
         <p className="font-black" style={{ color: C.ink }}>Record Team Money</p>
         <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-          {tabs.map(([k, l]) => <button key={k} onClick={() => pick(k)} className="px-3 py-1.5 text-sm font-semibold" style={{ background: kind === k ? C.pitchTint : "transparent", color: kind === k ? C.pitchDark : C.inkSoft }}>{l}</button>)}
+          {tabs.map(([k, l]) => <button key={k} onClick={() => pick(k)} className="px-3 py-1.5 text-sm font-semibold" style={{ whiteSpace: "nowrap", background: kind === k ? C.pitchTint : "transparent", color: kind === k ? C.pitchDark : C.inkSoft }}>{l}</button>)}
         </div>
       </div>
       <p className="text-xs mb-3" style={{ color: C.inkSoft }}>{kind === "expense" ? "Money paid out of the team bank account (coach, tournament entry, referees, bank fees)." : kind === "income" ? "Money deposited that isn't a player payment (sponsors, fundraisers, donations)." : "When you move team money from your Venmo into the team bank account. Record the amount that arrived in the bank."}</p>
@@ -2469,7 +2497,7 @@ function ReconcilePanel({ model }) {
       <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Enter your statement's end date and ending balance, then tick each item that appears on the statement. When the difference is $0.00 you're balanced.</p>
       <div className="grid sm:grid-cols-3 gap-3 mb-3">
         <Field label="Statement End Date"><TextInput type="date" value={stmtDate} onChange={(e) => { setStmtDate(e.target.value); setChecked(new Set()); }} /></Field>
-        <Field label="Statement Ending Balance"><TextInput type="number" step="0.01" value={stmtBal} onChange={(e) => setStmtBal(e.target.value)} placeholder="0.00" /></Field>
+        <Field label="Ending Balance"><TextInput type="number" step="0.01" value={stmtBal} onChange={(e) => setStmtBal(e.target.value)} placeholder="0.00" /></Field>
         <Field label="Starting From"><div className="text-sm py-2" style={{ color: C.ink }}>{fmtMoney(model.opening)} <span className="text-xs" style={{ color: C.inkSoft }}>{model.last ? `(reconciled ${model.last.statementDate})` : "(starting point)"}</span></div></Field>
       </div>
       {open.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>No uncleared items dated on or before {stmtDate}.</p> : (
@@ -2538,13 +2566,13 @@ function BankTab() {
         <p className="font-black mb-3" style={{ color: C.ink }}>Bank Activity Since {bank.start.date}</p>
         {model.items.length === 0 ? <p className="text-sm" style={{ color: C.inkSoft }}>Nothing yet. Bank deposits from parents, expenses, other deposits and Venmo transfers will appear here.</p> : (
           <div className="table-scroll"><table className="w-full text-sm">
-            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-3 py-2">Date</th><th className="font-semibold px-3 py-2">Item</th><th className="font-semibold px-3 py-2 text-right">Amount</th><th className="font-semibold px-3 py-2">Status</th></tr></thead>
+            <thead><tr className="text-left" style={{ background: C.lineSoft, color: C.inkSoft }}><th className="font-semibold px-4 py-3">Date</th><th className="font-semibold px-4 py-3">Item</th><th className="font-semibold px-4 py-3 text-right">Amount</th><th className="font-semibold px-4 py-3">Status</th></tr></thead>
             <tbody>{model.items.map((i) => (
               <tr key={i.src + i.id} className="border-t" style={{ borderColor: C.lineSoft }}>
-                <td className="px-3 py-2" style={{ color: C.ink, whiteSpace: "nowrap" }}>{i.date}</td>
-                <td className="px-3 py-2" style={{ color: C.ink }}>{i.label}{i.note ? <div className="text-xs" style={{ color: C.inkSoft }}>{i.note}</div> : null}</td>
-                <td className="px-3 py-2 text-right font-bold" style={{ color: i.signed < 0 ? C.debit : C.credit, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{i.signed < 0 ? "−" : "+"}{fmtMoney(Math.abs(i.signed))}</td>
-                <td className="px-3 py-2" style={{ whiteSpace: "nowrap" }}>{i.cleared ? <span className="text-xs font-semibold" style={{ color: C.credit }}>✓ Reconciled</span> : <span className="flex items-center gap-3"><span className="text-xs" style={{ color: C.inkSoft }}>Uncleared</span>{i.voidable && (role === "owner" || role === "treasurer") && <button onClick={() => voidItem(i)} className="text-xs font-semibold" style={{ color: C.debit }}>Void</button>}</span>}</td>
+                <td className="px-4 py-3" style={{ color: C.ink, whiteSpace: "nowrap" }}>{i.date}</td>
+                <td className="px-4 py-3" style={{ color: C.ink }}>{i.label}{i.note ? <div className="text-xs" style={{ color: C.inkSoft }}>{i.note}</div> : null}</td>
+                <td className="px-4 py-3 text-right font-bold" style={{ color: i.signed < 0 ? C.debit : C.credit, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{i.signed < 0 ? "−" : "+"}{fmtMoney(Math.abs(i.signed))}</td>
+                <td className="px-4 py-3" style={{ whiteSpace: "nowrap" }}>{i.cleared ? <span className="text-xs font-semibold" style={{ color: C.credit }}>✓ Reconciled</span> : <span className="flex items-center gap-3"><span className="text-xs" style={{ color: C.inkSoft }}>Uncleared</span>{i.voidable && (role === "owner" || role === "treasurer") && <button onClick={() => voidItem(i)} className="text-xs font-semibold" style={{ color: C.debit }}>Void</button>}</span>}</td>
               </tr>
             ))}</tbody>
           </table></div>
