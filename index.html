@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Team Treasury</title>
+<title>ClubCents</title>
 
 <!-- React + Babel (no build step needed) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
@@ -153,16 +153,16 @@ const { useState, useEffect, useMemo, useCallback, useContext } = React;
 /* ---------------------------------------------------------------
    Tokens
 ---------------------------------------------------------------- */
-/* TeamTab palette. Navy = structure and main buttons; orange = logo and small highlights only;
-   deep orange = amounts owed; green = payments and credits; gray = voided entries and notes. */
+/* ClubCents palette. Navy = header, main buttons and headings; pitch green (the logo coin) = payments and credits;
+   lime = highlights on dark backgrounds only (never text on white); deep orange = amounts owed; gray = voided entries and notes. */
 const C = {
-  bg: "#F4F6FA", surface: "#FFFFFF", ink: "#141B2D", inkSoft: "#4A5368",
+  bg: "#F4F6F3", surface: "#FFFFFF", ink: "#141B2D", inkSoft: "#4A5368",
   pitch: "#14213D", pitchDark: "#0B1428", pitchTint: "#E8ECF4",
   navy: "#14213D", navyTint: "#E8ECF4",
   debit: "#C2410C", debitTint: "#FCEDE4",
-  credit: "#15803D", creditTint: "#E7F4EA",
-  line: "#DDE2EC", lineSoft: "#ECEFF5", amber: "#B98A1E",
-  accent: "#F26B1D", voided: "#6B7280",
+  credit: "#0E5A3A", creditTint: "#E6F1EA",
+  line: "#DDE2DC", lineSoft: "#E7EAE5", amber: "#B98A1E",
+  accent: "#D7F25C", coin: "#0E5A3A", voided: "#6B7280",
 };
 
 
@@ -1269,7 +1269,7 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
         const parsed = JSON.parse(String(reader.result || ""));
         if (!Array.isArray(parsed.players) || !Array.isArray(parsed.transactions)) throw new Error("bad shape");
         setRestorePreview(parsed);
-      } catch (err) { setRestoreError("That doesn't look like a valid Team Treasury backup file."); }
+      } catch (err) { setRestoreError("That doesn't look like a valid ClubCents backup file."); }
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -1296,7 +1296,7 @@ function SettingsTab({ teamName, setTeamName, parentMessage, setParentMessage, v
         <p className="font-black mb-2" style={{ color: C.ink }}>Team Logo</p>
         <p className="text-sm mb-3" style={{ color: C.inkSoft }}>Shown on the sign in screen and at the top of every page. Use a square PNG or JPG, at least 320 × 320 pixels and under 10 MB. A PNG with a transparent background looks best. Larger images are resized automatically.</p>
         <div className="flex items-center gap-4 flex-wrap">
-          {teamLogo ? <img src={teamLogo} alt="Team Logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}`, fontSize: 32 }}>⚽</div>}
+          {teamLogo ? <img src={teamLogo} alt="Team Logo" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, border: `1px solid ${C.line}` }} /> : <div className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 12, border: `1px solid ${C.line}` }}><CoinMark size={56} /></div>}
           <div className="flex items-center gap-3 flex-wrap">
             <label className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer" style={{ border: `1px solid ${C.line}`, color: C.ink }}>
               {logoBusy ? <Spinner size={14} /> : "📷"} {teamLogo ? "Replace Image" : "Upload Image"}
@@ -1464,8 +1464,8 @@ function AdminShell({ teamName, setTeamName, parentMessage, setParentMessage, ve
   const tabs = [["dashboard", "Dashboard"], ["roster", "Roster"], ["transactions", "Transactions"], ["statements", "Statements"], ["bank", "Bank"], ["settings", "Settings"]];
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
-      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
-        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
+      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ background: C.navy, borderBottom: `3px solid ${C.accent}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: "#fff", fontFamily: "'Outfit', ui-sans-serif, system-ui, sans-serif" }}>{teamName}</p></div>
         <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{canSwitch && <button onClick={onSwitchTeam} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>Switch Team</button>}<button onClick={onLock} title={me} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button></div>
       </header>
       <nav className="flex gap-1 px-5 pt-4 print:hidden tab-scroll">
@@ -1496,9 +1496,9 @@ function CoachView({ teamName, players, transactions, onLogout }) {
   const roster = players.filter((p) => p.active);
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
-      <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
-        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
-        <button onClick={onLogout} className="text-sm font-semibold" style={{ color: C.inkSoft, flexShrink: 0 }}>Sign Out</button>
+      <header className="flex items-center justify-between px-5 py-4" style={{ background: C.navy, borderBottom: `3px solid ${C.accent}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: "#fff", fontFamily: "'Outfit', ui-sans-serif, system-ui, sans-serif" }}>{teamName}</p></div>
+        <button onClick={onLogout} className="text-sm font-semibold" style={{ color: "#E8ECF4", flexShrink: 0 }}>Sign Out</button>
       </header>
       <main className="p-5 max-w-2xl mx-auto">
         <p className="font-black text-lg" style={{ color: C.ink }}>Player Balances</p>
@@ -1545,8 +1545,8 @@ function ParentView({ teamName, parentMessage, venmoUsername, treasurerEmail, pl
     : null;
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
-      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ borderBottom: `1px solid ${C.line}` }}>
-        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{teamName}</p></div>
+      <header className="flex items-center justify-between px-5 py-4 print:hidden" style={{ background: C.navy, borderBottom: `3px solid ${C.accent}` }}>
+        <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: "#fff", fontFamily: "'Outfit', ui-sans-serif, system-ui, sans-serif" }}>{teamName}</p></div>
         <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>{onSwitch && <button onClick={onSwitch} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.pitchDark }}>← All Players</button>}<button onClick={onLogout} className="text-sm font-semibold" style={{ padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button></div>
       </header>
       <main className="p-5 max-w-2xl mx-auto">
@@ -1659,10 +1659,31 @@ function Shell({ children, onBack }) {
     </div>
   );
 }
+/* ClubCents coin logo. onDark adds a lime rim so the coin stays visible on the navy header. */
+function CoinMark({ size = 30, onDark = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" role="img" aria-label="ClubCents" style={{ flexShrink: 0, display: "block" }}>
+      {onDark
+        ? <circle cx="110" cy="110" r="104" fill={C.coin} stroke={C.accent} strokeWidth="8" />
+        : <>
+            <circle cx="110" cy="110" r="104" fill="none" stroke={C.coin} strokeWidth="8" strokeDasharray="6 5" />
+            <circle cx="110" cy="110" r="98" fill={C.coin} />
+            <circle cx="110" cy="110" r="84" fill="none" stroke={C.accent} strokeWidth="2" strokeOpacity="0.4" />
+          </>}
+      <g fill="none" strokeLinecap="round">
+        <path d="M108 78.8 A36 36 0 1 0 108 141.2" stroke="#FFFFFF" strokeWidth={onDark ? 18 : 14} />
+        <path d="M155.5 84.5 A36 36 0 1 0 155.5 135.5" stroke={C.coin} strokeWidth={onDark ? 30 : 24} />
+        <line x1="130" y1="60" x2="130" y2="160" stroke={C.coin} strokeWidth={onDark ? 24 : 19} />
+        <path d="M155.5 84.5 A36 36 0 1 0 155.5 135.5" stroke={C.accent} strokeWidth={onDark ? 18 : 14} />
+        <line x1="130" y1="60" x2="130" y2="160" stroke={C.accent} strokeWidth={onDark ? 12 : 9} />
+      </g>
+    </svg>
+  );
+}
 function TeamMark({ logo, size = 120 }) {
   return logo
     ? <img src={logo} alt="Team Logo" className="mx-auto mb-5" style={{ width: size, height: size, objectFit: "contain" }} />
-    : <div className="mx-auto mb-5 rounded-2xl flex items-center justify-center" style={{ width: size, height: size, background: C.pitchTint, fontSize: size * 0.45 }}>⚽</div>;
+    : <div className="mx-auto mb-5 flex items-center justify-center" style={{ width: size, height: size }}><CoinMark size={size} /></div>;
 }
 
 function useBranding() {
@@ -1682,7 +1703,7 @@ function Landing({ onPick }) {
     <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ background: C.bg }}>
       <div className="w-full max-w-md text-center">
         <TeamMark logo={brand && brand.logo} size={brand && brand.logo ? 176 : 120} />
-        <h1 className="text-2xl font-black tracking-tight" style={{ color: C.ink }}>{(brand && brand.name) || "Team Treasury"}</h1>
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: C.ink }}>{(brand && brand.name) || "ClubCents"}</h1>
         <p className="text-sm mt-1" style={{ color: C.inkSoft }}>Player account balances, fees, and statements.</p>
         <div className="mt-8 grid gap-3">
           <button onClick={() => onPick("parent")} className="flex items-center justify-between rounded-2xl p-4 text-left transition-transform hover:scale-[1.01]" style={{ background: C.pitchDark, color: "#fff", border: `1px solid ${C.pitchDark}` }}>
@@ -1967,7 +1988,7 @@ function StaffApp({ teamId, role, me, onSwitchTeam, canSwitch }) {
   if (loadErr) return <Shell><p className="text-sm" style={{ color: C.debit }}>⚠ {loadErr}</p><button onClick={signOut} className="text-sm font-semibold mt-4" style={{ color: C.pitchDark }}>Sign Out</button></Shell>;
   if (!team || !rawPlayers || !allTxns) return <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}><Spinner size={22} /></div>;
 
-  const teamName = team.name || "Team Treasury";
+  const teamName = team.name || "ClubCents";
   const ctx = { teamId, role, me, staff, voided, importBackup, addStaff, removeStaff, onSwitchTeam, canSwitch, checkPayableTo: team.checkPayableTo || "", setCheckPayableTo: setTeamField("checkPayableTo"), teamLogo: team.teamLogo || "", addTxns,
     bank: { start: team.bankStart || null, setBankStart, cash, recs, addCash, voidCash, finishReconciliation, allTxns: allTxns || [], players } };
   if (role === "coach") return <TeamCtx.Provider value={ctx}><CoachView teamName={teamName} players={players} transactions={transactions} onLogout={signOut} /></TeamCtx.Provider>;
@@ -2025,7 +2046,7 @@ function ParentApp({ me, kids }) {
     const team = teams[kid.teamId];
     return (
       <TeamCtx.Provider value={{ checkPayableTo: team.checkPayableTo || "", teamLogo: team.teamLogo || "" }}>
-        <ParentView teamName={team.name || "Team Treasury"} parentMessage={team.parentMessage || ""} venmoUsername={team.venmoUsername || ""} treasurerEmail={team.treasurerEmail || ""}
+        <ParentView teamName={team.name || "ClubCents"} parentMessage={team.parentMessage || ""} venmoUsername={team.venmoUsername || ""} treasurerEmail={team.treasurerEmail || ""}
           players={[kid]} transactions={visibleFor(kid)} playerId={kid.id} onLogout={signOut} onSwitch={kids.length > 1 ? () => setPickedId(null) : null} />
       </TeamCtx.Provider>
     );
@@ -2049,8 +2070,8 @@ function ParentApp({ me, kids }) {
   return (
     <TeamCtx.Provider value={{ teamLogo: multiTeam ? "" : (firstTeam.teamLogo || "") }}>
       <div style={{ background: C.bg, minHeight: "100vh" }}>
-        <header className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
-          <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: C.ink }}>{multiTeam ? "Your Family" : (firstTeam.name || "Team Treasury")}</p></div>
+        <header className="flex items-center justify-between px-5 py-4" style={{ background: C.navy, borderBottom: `3px solid ${C.accent}` }}>
+          <div className="flex items-center gap-2 min-w-0"><HeaderLogo /><p className="font-black truncate" style={{ color: "#fff", fontFamily: "'Outfit', ui-sans-serif, system-ui, sans-serif" }}>{multiTeam ? "Your Family" : (firstTeam.name || "ClubCents")}</p></div>
           <button onClick={signOut} className="text-sm font-semibold" style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.inkSoft }}>Sign Out</button>
         </header>
         <main className="p-5 max-w-2xl mx-auto">
@@ -2238,7 +2259,7 @@ function HeaderLogo() {
   const { teamLogo } = useContext(TeamCtx);
   return teamLogo
     ? <img src={teamLogo} alt="" style={{ width: 30, height: 30, objectFit: "contain", flexShrink: 0, borderRadius: 6 }} />
-    : <span className="rounded-lg flex items-center justify-center text-white" style={{ width: 30, height: 30, flexShrink: 0, background: C.pitch }}>⚽</span>;
+    : <CoinMark size={30} onDark />;
 }
 
 /* ---------------------------------------------------------------
