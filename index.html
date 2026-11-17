@@ -19,7 +19,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
+<!-- Brand font: Outfit (files in fonts/Outfit, SIL Open Font License) -->
+<link rel="stylesheet" href="fonts/Outfit/outfit.css" />
+
 <style>
+  /* Brand font for the app name, headings and big dollar amounts; body text stays the system font */
+  h1, h2, h3, .text-2xl, .text-xl { font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif; }
   /* Base reset: no browser-default grey buttons; controls use the page font */
   button { background: transparent; padding: 0; margin: 0; font: inherit; color: inherit; line-height: inherit; cursor: pointer; }
   button:disabled { cursor: not-allowed; }
@@ -39,7 +44,7 @@
   .w-40{width:10rem} .font-normal{font-weight:400} .justify-self-start{justify-self:start}
   @media (min-width:640px){ .sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))} }
 
-  * { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #DDE1D6; }
+  * { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #DDE2EC; }
   body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   @media print { body { background: #fff; } .print\:hidden { display: none !important; } }
 
@@ -85,7 +90,7 @@
   .hover\:opacity-90:hover{opacity:.9}
   .active\:opacity-80:active{opacity:.8}
   .disabled\:opacity-50:disabled{opacity:.5}
-  .focus\:ring-2:focus{box-shadow:0 0 0 2px rgba(30,107,69,.35)}
+  .focus\:ring-2:focus{box-shadow:0 0 0 2px rgba(20,33,61,.35)}
   .animate-spin{animation:tt-spin 1s linear infinite}
   @keyframes tt-spin{to{transform:rotate(360deg)}}
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -148,13 +153,16 @@ const { useState, useEffect, useMemo, useCallback, useContext } = React;
 /* ---------------------------------------------------------------
    Tokens
 ---------------------------------------------------------------- */
+/* TeamTab palette. Navy = structure and main buttons; orange = logo and small highlights only;
+   deep orange = amounts owed; green = payments and credits; gray = voided entries and notes. */
 const C = {
-  bg: "#F4F5F0", surface: "#FFFFFF", ink: "#122016", inkSoft: "#4B5B50",
-  pitch: "#1E6B45", pitchDark: "#123D28", pitchTint: "#E7F1EA",
-  navy: "#16324F", navyTint: "#E9EEF3",
-  debit: "#B3441E", debitTint: "#F7E9E1",
-  credit: "#1E6B45", creditTint: "#E7F1EA",
-  line: "#DDE1D6", lineSoft: "#EBEDE6", amber: "#B98A1E",
+  bg: "#F4F6FA", surface: "#FFFFFF", ink: "#141B2D", inkSoft: "#4A5368",
+  pitch: "#14213D", pitchDark: "#0B1428", pitchTint: "#E8ECF4",
+  navy: "#14213D", navyTint: "#E8ECF4",
+  debit: "#C2410C", debitTint: "#FCEDE4",
+  credit: "#15803D", creditTint: "#E7F4EA",
+  line: "#DDE2EC", lineSoft: "#ECEFF5", amber: "#B98A1E",
+  accent: "#F26B1D", voided: "#6B7280",
 };
 
 
